@@ -69,6 +69,9 @@ impl ReactionLab {
     fn draw_settings(&mut self, ui: &egui::Ui) {
         egui::Window::new("Settings")
             .open(&mut self.ui_state.show_settings)
+            .order(egui::Order::Foreground)
+            .default_pos(ui.ctx().content_rect().center())
+            .pivot(egui::Align2::CENTER_CENTER)
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
                     ui.label("Wait color:");
@@ -170,6 +173,9 @@ impl ReactionLab {
     fn draw_all_runs(&mut self, ui: &egui::Ui) {
         egui::Window::new("All Runs")
             .open(&mut self.ui_state.show_all_runs)
+            .order(egui::Order::Foreground)
+            .default_pos(ui.ctx().content_rect().center())
+            .pivot(egui::Align2::CENTER_CENTER)
             .default_width(600.0)
             .show(ui, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| {
