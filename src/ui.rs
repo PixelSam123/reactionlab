@@ -38,8 +38,11 @@ impl ReactionLab {
         if let Some(mode) = selected_mode
             && mode != self.active_mode
         {
-            if self.active_mode == ModeId::SimpleReactionTimeTest {
-                self.simple_reaction_time_test.reset_to_start();
+            match self.active_mode {
+                ModeId::SimpleReactionTimeTest => self.simple_reaction_time_test.reset_to_start(),
+                ModeId::ClickTimingReactionTest => {
+                    self.click_timing_reaction_test.reset_to_start();
+                }
             }
             self.active_mode = mode;
         }

@@ -24,10 +24,10 @@ This project is mostly AI-generated right now, it wil be retouched when I've fin
 
 ## Planned features
 
-- Click timing exercise, a crosshair in the middle of the screen then a "ball" will pass through the crosshair and you have to click while the ball is inside that crosshair.
-- Click timing video exercise, just a click timing exercise based on a video of someone peeking, but it starts playing at a random time
-- BallSheet-style test implementation
-- Better UI when other planned features are already done
+[x] Click timing exercise, a crosshair in the middle of the screen then a "ball" will pass through the crosshair and you have to click while the ball is inside that crosshair.
+[ ] Click timing video exercise, just a click timing exercise based on a video of someone peeking, but it starts playing at a random time
+[ ] BallSheet-style test implementation
+[ ] Better UI when other planned features are already done
 
 ## Caveats
 
@@ -40,7 +40,7 @@ Future migration to gpui is in consideration, if it becomes more documented
 The top panel contains a tab for each available mode. The available modes are:
 
 - Simple reaction time test, which contains the current reaction-time workflow.
-- Click timing reaction test, which is currently an empty placeholder.
+- Click timing reaction test, where a target travels from a configurable wall through a static crosshair and is scored by timing.
 
 The active mode fills the rest of the app window with its own UI.
 
@@ -60,9 +60,13 @@ Fills the screen with the wait color, then when a random time comes uses the rea
 
 End screen shows each round, also mean and median of the total rounds of the run that has just been played. Also a bar graph to visually show the results of each round. So it's similar to when reviewing stored run data. Also a button to "Try again" to bring the user back to the start screen.
 
+The click timing mode reports hit rate and absolute timing error for successful clicks. Failed attempts are classified as Too soon, Almost there (too soon or too late), Too late click, or Too late without a click. Every failure follows the configured retry or end-run action.
+
 ## Stored run data
 
 In the app's config directory (usually `.local/share/reactionlab` on Unix or `%APPDATA\reactionlab` on Windows), the simple reaction time mode stores its settings and run history in the `simple_reaction_time_test` subdirectory. Each run is stored as a JSON file with a `reactionlab-` prefix and timestamp showing when the run started. Each run contains its configurables and all its round information (chosen random wait time, user reaction time) so it can be reviewed in the start screen.
+
+The click timing mode uses a separate `click_timing_reaction_test` subdirectory. Its run files store the full configuration snapshot and every realized attempt, including direction, generated initial velocity, stop behavior, timing offset, logical round, and explicit outcome.
 
 Existing root-level persistence is not migrated.
 
@@ -78,3 +82,14 @@ Settings window contains both configurables and a button to reset history to cle
 - Maximum wait time, 10000 ms by default
 - Whether a false click invalidates an entire run or just a round
 - Round count, 5 by default
+
+## Click timing configurables
+
+- Static crosshair style, colors, outline, dimensions, gap, T style, and center dot
+- Independent left and right wall distances
+- Target visual radius, clickable radius, RGBA color, speed, acceleration, deceleration, and miss timeout
+- Full, mixed, or zero initial velocity
+- Always-stop-on-crosshair behavior
+- Left/right direction checkboxes, with random direction when both are selected
+- Randomized minimum and maximum target appearance wait
+- Round count and retry-round or end-run failure action
