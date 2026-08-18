@@ -64,7 +64,7 @@ The click timing mode reports hit rate and absolute timing error for successful 
 
 ## Stored run data
 
-In the app's config directory (usually `.local/share/reactionlab` on Unix or `%APPDATA\reactionlab` on Windows), the simple reaction time mode stores its settings and run history in the `simple_reaction_time_test` subdirectory. Each run is stored as a JSON file with a `reactionlab-` prefix and timestamp showing when the run started. Each run contains its configurables and all its round information (chosen random wait time, user reaction time) so it can be reviewed in the start screen.
+In the app's config directory (usually `.local/share/reactionlab` on Unix or `%APPDATA\reactionlab` on Windows), the simple reaction time mode stores its settings and run history in the `simple_reaction_time_test` subdirectory. Each run is stored as a JSON file with a `reactionlab-` prefix and millisecond-precision timestamp showing when the run started. Each run contains its configurables and all its round information (chosen random wait time, user reaction time) so it can be reviewed in the start screen.
 
 The click timing mode uses a separate `click_timing_reaction_test` subdirectory. Its run files store the full configuration snapshot and every realized attempt, including direction, generated initial velocity, stop behavior, timing offset, logical round, and explicit outcome.
 

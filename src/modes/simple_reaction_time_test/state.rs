@@ -134,7 +134,7 @@ impl AppState {
     }
 
     fn finish_run(&mut self) -> RunData {
-        let timestamp = Local::now().format("%Y-%m-%d_%H-%M-%S").to_string();
+        let timestamp = Local::now().format("%Y-%m-%d_%H-%M-%S%.3f").to_string();
         let run_data = RunData {
             timestamp,
             config: self.config.clone(),

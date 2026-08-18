@@ -80,14 +80,15 @@ pub fn filename_to_display(filename: &str) -> String {
         .strip_prefix("reactionlab-")
         .and_then(|s| s.strip_suffix(".json"))
         .unwrap_or("");
-    NaiveDateTime::parse_from_str(ts_str, "%Y-%m-%d_%H-%M-%S")
+    parse_timestamp(ts_str)
         .map(|dt| {
             dt.format("%e %B %Y, %H:%M:%S")
                 .to_string()
                 .trim_start()
                 .to_string()
+                + &format!(".{:03}", dt.and_utc().timestamp_subsec_millis())
         })
-        .unwrap_or_else(|_| filename.to_string())
+        .unwrap_or_else(|| filename.to_string())
 }
 
 pub fn load_run_data(filename: &str) -> Option<RunData> {
@@ -138,9 +139,7 @@ pub fn load_history_summary() -> Vec<(NaiveDateTime, f64)> {
             {
                 let times: Vec<f64> = run_data.rounds.iter().map(|r| r.reaction_time_ms).collect();
                 let mean = compute_mean(&times);
-                if let Ok(dt) =
-                    NaiveDateTime::parse_from_str(&run_data.timestamp, "%Y-%m-%d_%H-%M-%S")
-                {
+                if let Some(dt) = parse_timestamp(&run_data.timestamp) {
                     entries.push((dt, mean));
                 }
             }
@@ -150,4 +149,24 @@ pub fn load_history_summary() -> Vec<(NaiveDateTime, f64)> {
     entries.truncate(10);
     entries.reverse();
     entries
+}
+
+fn parse_timestamp(timestamp: &str) -> Option<NaiveDateTime> {
+    if !timestamp.contains('.') {
+        return None;
+    }
+    NaiveDateTime::parse_from_str(timestamp, "%Y-%m-%d_%H-%M-%S%.3f").ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn displays_millisecond_precision_timestamp() {
+        assert_eq!(
+            filename_to_display("reactionlab-2026-08-18_12-34-56.123.json"),
+            "18 August 2026, 12:34:56.123"
+        );
+    }
 }
