@@ -3,7 +3,7 @@ use std::time::Instant;
 use chrono::Local;
 use rand::RngExt;
 
-use crate::types::{AppScreen, Configurables, FalseClickAction, RoundResult, RoundState, RunData};
+use super::types::{AppScreen, Configurables, FalseClickAction, RoundResult, RoundState, RunData};
 
 pub struct AppState {
     pub screen: AppScreen,
@@ -122,6 +122,17 @@ impl AppState {
         self.current_round = 0;
     }
 
+    pub fn reset_to_start(&mut self) {
+        self.screen = AppScreen::Start;
+        self.round_state = RoundState::Waiting;
+        self.round_results.clear();
+        self.current_round = 0;
+        self.wait_start = None;
+        self.react_start = None;
+        self.random_wait_ms = 0.0;
+        self.last_reaction_ms = None;
+    }
+
     fn finish_run(&mut self) -> RunData {
         let timestamp = Local::now().format("%Y-%m-%d_%H-%M-%S").to_string();
         let run_data = RunData {
@@ -233,6 +244,33 @@ mod tests {
         assert_eq!(state.current_round, 0);
         assert!(matches!(state.screen, AppScreen::Round));
         assert!(matches!(state.round_state, RoundState::Waiting));
+    }
+
+    #[test]
+    fn reset_to_start_clears_active_round_state() {
+        let mut state = AppState::new(Configurables::default(), Vec::new());
+        state.screen = AppScreen::Round;
+        state.round_state = RoundState::Reacting;
+        state.current_round = 2;
+        state.round_results.push(RoundResult {
+            wait_time_ms: 250.0,
+            reaction_time_ms: 125.0,
+        });
+        state.wait_start = Some(Instant::now());
+        state.react_start = Some(Instant::now());
+        state.random_wait_ms = 250.0;
+        state.last_reaction_ms = Some(125.0);
+
+        state.reset_to_start();
+
+        assert!(matches!(state.screen, AppScreen::Start));
+        assert!(matches!(state.round_state, RoundState::Waiting));
+        assert_eq!(state.current_round, 0);
+        assert!(state.round_results.is_empty());
+        assert!(state.wait_start.is_none());
+        assert!(state.react_start.is_none());
+        assert_eq!(state.random_wait_ms, 0.0);
+        assert!(state.last_reaction_ms.is_none());
     }
 
     #[test]

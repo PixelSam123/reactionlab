@@ -1,6 +1,4 @@
-mod state;
-mod storage;
-mod types;
+mod modes;
 mod ui;
 
 use eframe::wgpu::PresentMode;

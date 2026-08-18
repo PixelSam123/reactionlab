@@ -3,13 +3,14 @@ use std::path::PathBuf;
 
 use chrono::{NaiveDate, NaiveDateTime};
 
-use crate::state::compute_mean;
-use crate::types::{Configurables, RunData, RunFileInfo};
+use super::state::compute_mean;
+use super::types::{Configurables, RunData, RunFileInfo};
 
 pub fn data_dir() -> PathBuf {
     dirs::data_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join("reactionlab")
+        .join("simple_reaction_time_test")
 }
 
 pub fn config_path() -> PathBuf {

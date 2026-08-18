@@ -37,7 +37,12 @@ Future migration to gpui is in consideration, if it becomes more documented
 
 ## App UI
 
-The entire app is filled by the reaction time test contents (the start screen, round screen, or end screen).
+The top panel contains a tab for each available mode. The available modes are:
+
+- Simple reaction time test, which contains the current reaction-time workflow.
+- Click timing reaction test, which is currently an empty placeholder.
+
+The active mode fills the rest of the app window with its own UI.
 
 ## Start screen
 
@@ -57,7 +62,9 @@ End screen shows each round, also mean and median of the total rounds of the run
 
 ## Stored run data
 
-In the app's config directory (usually `.local/share/reactionlab` on Unix or `%APPDATA\reactionlab` on Windows), the app stores a folder with run data with a "reactionlab-" prefix then timestamp to show date and time the run was started down to the second. Each run has both its configurables and all its round information (chosen random wait time, user reaction time) stored so it can be reviewed in the start screen.
+In the app's config directory (usually `.local/share/reactionlab` on Unix or `%APPDATA\reactionlab` on Windows), the simple reaction time mode stores its settings and run history in the `simple_reaction_time_test` subdirectory. Each run is stored as a JSON file with a `reactionlab-` prefix and timestamp showing when the run started. Each run contains its configurables and all its round information (chosen random wait time, user reaction time) so it can be reviewed in the start screen.
+
+Existing root-level persistence is not migrated.
 
 ## Settings window
 
