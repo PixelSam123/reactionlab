@@ -14,6 +14,7 @@ use crate::storage;
 use crate::types::{FalseClickAction, RoundResult, RoundState, RunData, RunFileInfo};
 
 const MAX_CONTENT_WIDTH: f32 = 1000.0;
+const START_STACK_WIDTH: f32 = 600.0;
 
 pub struct ReactionLab {
     state: AppState,
@@ -29,6 +30,8 @@ struct UiState {
     delete_year: u32,
     delete_month: u32,
     delete_day: u32,
+    last_start_panel_size: Option<egui::Vec2>,
+    last_end_panel_size: Option<egui::Vec2>,
 }
 
 impl UiState {
@@ -43,6 +46,8 @@ impl UiState {
             delete_year: today.year() as u32,
             delete_month: today.month(),
             delete_day: today.day(),
+            last_start_panel_size: None,
+            last_end_panel_size: None,
         }
     }
 }
@@ -337,48 +342,90 @@ impl eframe::App for ReactionLab {
 }
 
 impl ReactionLab {
+    fn draw_start_history(&mut self, ui: &mut egui::Ui) {
+        if self.state.history_means.is_empty() {
+            ui.label("No previous runs yet.");
+        } else {
+            let points: Vec<f64> = self
+                .state
+                .history_means
+                .iter()
+                .map(|(_, mean)| *mean)
+                .collect();
+            Self::draw_line_chart(ui, &points);
+        }
+
+        if ui.button("Show all runs").clicked() {
+            self.ui_state.show_all_runs = true;
+            self.ui_state.viewed_run_filename = None;
+            self.ui_state.viewed_run_data = None;
+            self.ui_state.run_file_list = storage::list_run_files();
+        }
+    }
+
+    fn draw_start_actions(&mut self, ui: &mut egui::Ui, add_top_space: bool) {
+        ui.vertical_centered(|ui| {
+            if add_top_space {
+                ui.add_space(60.0);
+            }
+            if ui.button("⚙ Settings").clicked() {
+                self.ui_state.show_settings = !self.ui_state.show_settings;
+                if !self.ui_state.show_settings {
+                    storage::save_config(&self.state.config);
+                    self.state.history_means = storage::load_history_summary();
+                    self.ui_state.run_file_list.clear();
+                }
+            }
+            ui.add_space(20.0);
+            if ui.button("Start new run").clicked() {
+                self.state.restart_run();
+            }
+        });
+    }
+
     fn draw_start(&mut self, ui: &mut egui::Ui) {
         CentralPanel::default().show(ui, |ui| {
-            ui.vertical_centered(|ui| {
-                ui.add_space(40.0);
-                ui.set_max_width(MAX_CONTENT_WIDTH);
-                ui.columns(2, |cols| {
-                    if self.state.history_means.is_empty() {
-                        cols[0].label("No previous runs yet.");
-                    } else {
-                        let points: Vec<f64> = self
-                            .state
-                            .history_means
-                            .iter()
-                            .map(|(_, mean)| *mean)
-                            .collect();
-                        Self::draw_line_chart(&mut cols[0], &points);
-                    }
-
-                    if cols[0].button("Show all runs").clicked() {
-                        self.ui_state.show_all_runs = true;
-                        self.ui_state.viewed_run_filename = None;
-                        self.ui_state.viewed_run_data = None;
-                        self.ui_state.run_file_list = storage::list_run_files();
-                    }
-
-                    cols[1].vertical_centered(|ui| {
-                        ui.add_space(60.0);
-                        if ui.button("⚙ Settings").clicked() {
-                            self.ui_state.show_settings = !self.ui_state.show_settings;
-                            if !self.ui_state.show_settings {
-                                storage::save_config(&self.state.config);
-                                self.state.history_means = storage::load_history_summary();
-                                self.ui_state.run_file_list.clear();
-                            }
-                        }
-                        ui.add_space(20.0);
-                        if ui.button("Start new run").clicked() {
-                            self.state.restart_run();
-                        }
-                    });
-                });
+            let available_width = ui.available_width();
+            let content_width = available_width.min(MAX_CONTENT_WIDTH);
+            let stack_content = available_width < START_STACK_WIDTH;
+            let panel_rect = ui.available_rect_before_wrap();
+            let needs_resize = self.ui_state.last_start_panel_size.is_none_or(|last_size| {
+                (last_size.x - panel_rect.width()).abs() > 0.5
+                    || (last_size.y - panel_rect.height()).abs() > 0.5
             });
+            self.ui_state.last_start_panel_size = Some(panel_rect.size());
+
+            egui::Area::new(egui::Id::new("start-content"))
+                .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
+                .constrain_to(panel_rect)
+                .default_size(egui::vec2(content_width, panel_rect.height()))
+                .sizing_pass(needs_resize)
+                .show(ui.ctx(), |ui| {
+                    ui.set_width(content_width);
+                    egui::ScrollArea::vertical()
+                        .max_height(panel_rect.height())
+                        .auto_shrink([false, true])
+                        .show(ui, |ui| {
+                            if stack_content {
+                                self.draw_start_history(ui);
+                                ui.add_space(20.0);
+                                self.draw_start_actions(ui, false);
+                            } else {
+                                let column_width =
+                                    (content_width - ui.spacing().item_spacing.x).max(0.0) / 2.0;
+                                ui.horizontal(|ui| {
+                                    ui.vertical(|ui| {
+                                        ui.set_width(column_width);
+                                        self.draw_start_history(ui);
+                                    });
+                                    ui.vertical(|ui| {
+                                        ui.set_width(column_width);
+                                        self.draw_start_actions(ui, true);
+                                    });
+                                });
+                            }
+                        });
+                });
         });
     }
 
@@ -432,48 +479,65 @@ impl ReactionLab {
 
     fn draw_end(&mut self, ui: &mut egui::Ui) {
         CentralPanel::default().show(ui, |ui| {
-            ui.centered_and_justified(|ui| {
-                ui.set_max_width(MAX_CONTENT_WIDTH);
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    let times: Vec<f64> = self
-                        .state
-                        .round_results
-                        .iter()
-                        .map(|r| r.reaction_time_ms)
-                        .collect();
-                    let mean = compute_mean(&times);
-                    let median = compute_median(&times);
-
-                    ui.heading("Run Results");
-                    ui.separator();
-
-                    ui.label(format!("Mean: {mean:.0} ms"));
-                    ui.label(format!("Median: {median:.0} ms"));
-
-                    ui.separator();
-
-                    for (i, round) in self.state.round_results.iter().enumerate() {
-                        ui.label(format!(
-                            "Round {}: wait {:.0} ms, reaction {:.0} ms",
-                            i + 1,
-                            round.wait_time_ms,
-                            round.reaction_time_ms
-                        ));
-                    }
-
-                    ui.separator();
-
-                    Self::draw_bar_chart(ui, &self.state.round_results);
-
-                    ui.separator();
-
-                    ui.vertical_centered(|ui| {
-                        if ui.button("Try again").clicked() {
-                            self.state.go_to_start();
-                        }
-                    });
-                });
+            let available_width = ui.available_width();
+            let content_width = available_width.min(MAX_CONTENT_WIDTH);
+            let panel_rect = ui.available_rect_before_wrap();
+            let needs_resize = self.ui_state.last_end_panel_size.is_none_or(|last_size| {
+                (last_size.x - panel_rect.width()).abs() > 0.5
+                    || (last_size.y - panel_rect.height()).abs() > 0.5
             });
+            self.ui_state.last_end_panel_size = Some(panel_rect.size());
+
+            egui::Area::new(egui::Id::new("end-content"))
+                .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
+                .constrain_to(panel_rect)
+                .default_size(egui::vec2(content_width, panel_rect.height()))
+                .sizing_pass(needs_resize)
+                .show(ui.ctx(), |ui| {
+                    ui.set_width(content_width);
+                    egui::ScrollArea::vertical()
+                        .max_height(panel_rect.height())
+                        .auto_shrink([true, true])
+                        .show(ui, |ui| {
+                            let times: Vec<f64> = self
+                                .state
+                                .round_results
+                                .iter()
+                                .map(|r| r.reaction_time_ms)
+                                .collect();
+                            let mean = compute_mean(&times);
+                            let median = compute_median(&times);
+
+                            ui.heading("Run Results");
+                            ui.separator();
+
+                            ui.label(format!("Mean: {mean:.0} ms"));
+                            ui.label(format!("Median: {median:.0} ms"));
+
+                            ui.separator();
+
+                            for (i, round) in self.state.round_results.iter().enumerate() {
+                                ui.label(format!(
+                                    "Round {}: wait {:.0} ms, reaction {:.0} ms",
+                                    i + 1,
+                                    round.wait_time_ms,
+                                    round.reaction_time_ms
+                                ));
+                            }
+
+                            ui.separator();
+
+                            Self::draw_bar_chart(ui, &self.state.round_results);
+
+                            ui.separator();
+
+                            ui.vertical_centered(|ui| {
+                                if ui.button("Try again").clicked() {
+                                    self.state.go_to_start();
+                                }
+                            });
+                        });
+                });
         });
     }
 }
