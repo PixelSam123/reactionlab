@@ -361,12 +361,14 @@ impl ReactionLab {
             Self::draw_line_chart(ui, &points);
         }
 
-        if ui.button("Show all runs").clicked() {
-            self.ui_state.show_all_runs = true;
-            self.ui_state.viewed_run_filename = None;
-            self.ui_state.viewed_run_data = None;
-            self.ui_state.run_file_list = storage::list_run_files();
-        }
+        ui.centered_and_justified(|ui| {
+            if ui.button("Show all runs").clicked() {
+                self.ui_state.show_all_runs = true;
+                self.ui_state.viewed_run_filename = None;
+                self.ui_state.viewed_run_data = None;
+                self.ui_state.run_file_list = storage::list_run_files();
+            }
+        });
     }
 
     fn draw_start_actions(&mut self, ui: &mut egui::Ui, add_top_space: bool) {
