@@ -340,6 +340,13 @@ impl SimpleReactionTimeTest {
 
 impl SimpleReactionTimeTest {
     pub fn show(&mut self, ui: &mut egui::Ui) {
+        if self.ui_state.last_start_panel_size.is_some() && self.state.screen != AppScreen::Start {
+            self.ui_state.last_start_panel_size = None;
+        }
+        if self.ui_state.last_end_panel_size.is_some() && self.state.screen != AppScreen::End {
+            self.ui_state.last_end_panel_size = None;
+        }
+
         if self.state.screen == AppScreen::Round && self.state.round_state == RoundState::Waiting {
             ui.ctx().request_repaint();
         }
