@@ -8,7 +8,7 @@
 use std::time::Instant;
 
 use chrono::{Datelike, Local, NaiveDate};
-use eframe::egui::{self, CentralPanel, Color32, Frame};
+use eframe::egui::{self, Align2, CentralPanel, Color32, FontId, Frame, Painter, Pos2, Rect};
 use egui_plot::{Bar, BarChart, Line, Plot, PlotPoints};
 
 use super::state::{AppState, compute_mean, compute_median};
@@ -462,38 +462,35 @@ impl SimpleReactionTimeTest {
         CentralPanel::default()
             .frame(Frame::NONE.fill(fill_color))
             .show(ui, |ui| {
+                let canvas_rect = ui.available_rect_before_wrap();
                 let pressed = ui.input(|i| i.pointer.primary_pressed());
 
                 if pressed && let Some(run_data) = self.state.handle_click_at(now) {
                     self.persist_finished_run(&run_data);
                 }
 
+                let painter = ui.painter_at(canvas_rect);
+
                 if self.state.round_state == RoundState::ResultShowing {
-                    ui.vertical_centered(|ui| {
-                        ui.add_space(ui.available_height() * 0.35);
-                        if let Some(ms) = self.state.last_reaction_ms {
-                            ui.heading(format!("{ms:.0} ms"));
-                        }
-                        ui.add_space(10.0);
-                        ui.label(format!(
-                            "Round {}/{} — click to continue",
-                            self.state.current_round + 1,
-                            self.state.config.round_count
-                        ));
-                    });
+                    let heading = self
+                        .state
+                        .last_reaction_ms
+                        .map_or_else(String::new, |ms| format!("{ms:.0} ms"));
+                    let description = format!(
+                        "Round {}/{} — click to continue",
+                        self.state.current_round + 1,
+                        self.state.config.round_count
+                    );
+                    draw_round_overlay(&painter, canvas_rect, heading, description);
                 }
 
                 if self.state.round_state == RoundState::TooSoon {
-                    let action_text = match self.state.config.false_click_action {
+                    let description = match self.state.config.false_click_action {
                         FalseClickAction::RetryRound => "Click to try again",
                         FalseClickAction::EndRun => "Click to end the run",
-                    };
-                    ui.vertical_centered(|ui| {
-                        ui.add_space(ui.available_height() * 0.35);
-                        ui.heading("Too soon!");
-                        ui.add_space(10.0);
-                        ui.label(action_text);
-                    });
+                    }
+                    .to_string();
+                    draw_round_overlay(&painter, canvas_rect, "Too soon!".to_string(), description);
                 }
             });
     }
@@ -561,4 +558,22 @@ impl SimpleReactionTimeTest {
                 });
         });
     }
+}
+
+fn draw_round_overlay(painter: &Painter, canvas: Rect, heading: String, description: String) {
+    let center = canvas.center();
+    painter.text(
+        Pos2::new(center.x, center.y - 32.0),
+        Align2::CENTER_CENTER,
+        heading,
+        FontId::proportional(28.0),
+        Color32::WHITE,
+    );
+    painter.text(
+        Pos2::new(center.x, center.y + 8.0),
+        Align2::CENTER_CENTER,
+        description,
+        FontId::proportional(16.0),
+        Color32::LIGHT_GRAY,
+    );
 }
