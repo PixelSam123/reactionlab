@@ -48,10 +48,6 @@ impl AppState {
         self.last_reaction_ms = None;
     }
 
-    pub fn update_waiting(&mut self) {
-        self.update_waiting_at(Instant::now());
-    }
-
     pub fn update_waiting_at(&mut self, now: Instant) {
         if self.round_state == RoundState::Waiting
             && let Some(start) = self.wait_start
@@ -60,10 +56,6 @@ impl AppState {
             self.round_state = RoundState::Reacting;
             self.react_start = Some(now);
         }
-    }
-
-    pub fn handle_click(&mut self) -> Option<RunData> {
-        self.handle_click_at(Instant::now())
     }
 
     pub fn handle_click_at(&mut self, now: Instant) -> Option<RunData> {

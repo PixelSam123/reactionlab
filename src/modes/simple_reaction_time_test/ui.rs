@@ -5,6 +5,8 @@
     clippy::cast_possible_wrap
 )]
 
+use std::time::Instant;
+
 use chrono::{Datelike, Local, NaiveDate};
 use eframe::egui::{self, CentralPanel, Color32, Frame};
 use egui_plot::{Bar, BarChart, Line, Plot, PlotPoints};
@@ -448,7 +450,8 @@ impl SimpleReactionTimeTest {
     }
 
     fn draw_round(&mut self, ui: &mut egui::Ui) {
-        self.state.update_waiting();
+        let now = Instant::now();
+        self.state.update_waiting_at(now);
 
         let fill_color = match self.state.round_state {
             RoundState::Waiting => self.state.config.wait_color_egui(),
@@ -461,7 +464,7 @@ impl SimpleReactionTimeTest {
             .show(ui, |ui| {
                 let pressed = ui.input(|i| i.pointer.primary_pressed());
 
-                if pressed && let Some(run_data) = self.state.handle_click() {
+                if pressed && let Some(run_data) = self.state.handle_click_at(now) {
                     self.persist_finished_run(run_data);
                 }
 
