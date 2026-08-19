@@ -91,10 +91,7 @@ impl AppState {
 
     pub fn update_at(&mut self, now: Instant, clicked: bool) -> Option<RunData> {
         if self.round_state == RoundState::Waiting {
-            let waiting_elapsed = self
-                .wait_start
-                .map(|start| elapsed_ms(now, start))
-                .unwrap_or(0.0);
+            let waiting_elapsed = self.wait_start.map_or(0.0, |start| elapsed_ms(now, start));
             if waiting_elapsed >= self.appearance_wait_ms {
                 self.round_state = RoundState::Moving;
                 self.movement_start = Some(now);

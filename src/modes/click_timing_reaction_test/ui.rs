@@ -49,7 +49,7 @@ impl UiState {
             run_file_list: Vec::new(),
             viewed_run_filename: None,
             viewed_run_data: None,
-            delete_year: today.year() as u32,
+            delete_year: today.year().cast_unsigned(),
             delete_month: today.month(),
             delete_day: today.day(),
             last_start_panel_size: None,
@@ -492,7 +492,7 @@ impl ClickTimingReactionTest {
             .iter()
             .enumerate()
             .map(|(index, attempt)| {
-                let value = attempt.click_offset_ms.map(f64::abs).unwrap_or(0.0);
+                let value = attempt.click_offset_ms.map_or(0.0, f64::abs);
                 Bar::new((index + 1) as f64, value)
                     .name(format!("A{}", index + 1))
                     .fill(if attempt.outcome.is_hit() {
@@ -851,7 +851,7 @@ fn drag_usize(
     });
 }
 
-fn crosshair_style_label(style: CrosshairStyle) -> &'static str {
+const fn crosshair_style_label(style: CrosshairStyle) -> &'static str {
     match style {
         CrosshairStyle::Regular => "Regular",
         CrosshairStyle::Plus => "Plus",
@@ -1066,7 +1066,7 @@ fn successful_errors(attempts: &[RoundResult]) -> Vec<f64> {
         .collect()
 }
 
-fn lighter_color(color: Color32) -> Color32 {
+const fn lighter_color(color: Color32) -> Color32 {
     Color32::from_rgb(
         color.r().saturating_add(35),
         color.g().saturating_add(35),

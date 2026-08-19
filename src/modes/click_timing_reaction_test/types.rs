@@ -1,6 +1,7 @@
 use eframe::egui::Color32;
 use serde::{Deserialize, Serialize};
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct Configurables {
     #[serde(default)]

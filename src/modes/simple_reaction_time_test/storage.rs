@@ -80,15 +80,16 @@ pub fn filename_to_display(filename: &str) -> String {
         .strip_prefix("reactionlab-")
         .and_then(|s| s.strip_suffix(".json"))
         .unwrap_or("");
-    parse_timestamp(ts_str)
-        .map(|dt| {
+    parse_timestamp(ts_str).map_or_else(
+        || filename.to_string(),
+        |dt| {
             dt.format("%e %B %Y, %H:%M:%S")
                 .to_string()
                 .trim_start()
                 .to_string()
                 + &format!(".{:03}", dt.and_utc().timestamp_subsec_millis())
-        })
-        .unwrap_or_else(|| filename.to_string())
+        },
+    )
 }
 
 pub fn load_run_data(filename: &str) -> Option<RunData> {

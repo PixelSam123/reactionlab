@@ -75,8 +75,8 @@ impl SimpleReactionTimeTest {
         self.ui_state.run_file_list.clear();
     }
 
-    fn persist_finished_run(&mut self, run_data: RunData) {
-        storage::save_run(&run_data);
+    fn persist_finished_run(&mut self, run_data: &RunData) {
+        storage::save_run(run_data);
         self.state.history_means = storage::load_history_summary();
     }
 
@@ -465,7 +465,7 @@ impl SimpleReactionTimeTest {
                 let pressed = ui.input(|i| i.pointer.primary_pressed());
 
                 if pressed && let Some(run_data) = self.state.handle_click_at(now) {
-                    self.persist_finished_run(run_data);
+                    self.persist_finished_run(&run_data);
                 }
 
                 if self.state.round_state == RoundState::ResultShowing {

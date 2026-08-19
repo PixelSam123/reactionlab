@@ -19,7 +19,10 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new(config: Configurables, history_means: Vec<(chrono::NaiveDateTime, f64)>) -> Self {
+    pub const fn new(
+        config: Configurables,
+        history_means: Vec<(chrono::NaiveDateTime, f64)>,
+    ) -> Self {
         Self {
             screen: AppScreen::Start,
             config,
