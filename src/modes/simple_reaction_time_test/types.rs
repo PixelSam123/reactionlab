@@ -27,7 +27,7 @@ const fn default_min_wait() -> u64 {
     250
 }
 const fn default_max_wait() -> u64 {
-    10000
+    7500
 }
 const fn default_round_count() -> usize {
     5

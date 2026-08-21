@@ -97,15 +97,15 @@ const fn default_regular_center_gap() -> f32 {
 }
 
 const fn default_plus_length() -> f32 {
-    40.0
+    10.0
 }
 
 const fn default_plus_thickness() -> f32 {
-    4.0
+    1.5
 }
 
 const fn default_dot_diameter() -> f32 {
-    8.0
+    3.0
 }
 
 const fn default_left_wall_distance() -> f32 {
@@ -117,7 +117,7 @@ const fn default_right_wall_distance() -> f32 {
 }
 
 const fn default_target_visual_radius() -> f32 {
-    8.0
+    7.0
 }
 
 const fn default_target_clickable_radius() -> f32 {
@@ -133,7 +133,7 @@ const fn default_stop_on_crosshair() -> bool {
 }
 
 const fn default_full_speed_velocity() -> f32 {
-    400.0
+    300.0
 }
 
 const fn default_acceleration_duration() -> u64 {
