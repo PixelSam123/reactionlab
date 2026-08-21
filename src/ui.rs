@@ -3,11 +3,13 @@ use eframe::egui;
 use crate::modes::ModeId;
 use crate::modes::click_timing_reaction_test::ClickTimingReactionTest;
 use crate::modes::simple_reaction_time_test::SimpleReactionTimeTest;
+use crate::modes::video_click_timing_test::VideoClickTimingTest;
 
 pub struct ReactionLab {
     active_mode: ModeId,
     simple_reaction_time_test: SimpleReactionTimeTest,
     click_timing_reaction_test: ClickTimingReactionTest,
+    video_click_timing_test: VideoClickTimingTest,
 }
 
 impl ReactionLab {
@@ -16,6 +18,7 @@ impl ReactionLab {
             active_mode: ModeId::SimpleReactionTimeTest,
             simple_reaction_time_test: SimpleReactionTimeTest::new(),
             click_timing_reaction_test: ClickTimingReactionTest::new(),
+            video_click_timing_test: VideoClickTimingTest::new(),
         }
     }
 
@@ -25,6 +28,7 @@ impl ReactionLab {
             for mode in [
                 ModeId::SimpleReactionTimeTest,
                 ModeId::ClickTimingReactionTest,
+                ModeId::VideoClickTimingTest,
             ] {
                 if ui
                     .selectable_label(self.active_mode == mode, mode.label())
@@ -43,6 +47,7 @@ impl ReactionLab {
                 ModeId::ClickTimingReactionTest => {
                     self.click_timing_reaction_test.reset_to_start();
                 }
+                ModeId::VideoClickTimingTest => self.video_click_timing_test.reset_to_start(),
             }
             self.active_mode = mode;
         }
@@ -58,6 +63,7 @@ impl eframe::App for ReactionLab {
         match self.active_mode {
             ModeId::SimpleReactionTimeTest => self.simple_reaction_time_test.show(ui),
             ModeId::ClickTimingReactionTest => self.click_timing_reaction_test.show(ui),
+            ModeId::VideoClickTimingTest => self.video_click_timing_test.show(ui),
         }
     }
 }
