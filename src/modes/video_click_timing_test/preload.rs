@@ -1,10 +1,10 @@
 use std::collections::HashSet;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
-use std::sync::Arc;
 use std::thread;
 
-use super::extraction::{extract_segment, VideoSegment};
+use super::extraction::{VideoSegment, extract_segment};
 use super::state::segment_key;
 use super::types::VideoConfig;
 

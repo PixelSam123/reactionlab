@@ -255,19 +255,21 @@ mod tests {
             }
         }
 
-        let segment =
-            extract_segment(&target_path, 0.0, 500.0, 30.0)
-                .expect("extraction of a generated clip should succeed");
-        assert!(segment.frames.len() >= 10, "expected ~15 frames, got {}", segment.frames.len());
+        let segment = extract_segment(&target_path, 0.0, 500.0, 30.0)
+            .expect("extraction of a generated clip should succeed");
+        assert!(
+            segment.frames.len() >= 10,
+            "expected ~15 frames, got {}",
+            segment.frames.len()
+        );
         assert_eq!(segment.fps, 30.0);
         let first = &segment.frames[0];
         assert_eq!(first.width(), 320);
         assert_eq!(first.height(), 240);
 
         // A zero-length range denotes a single starting frame.
-        let degenerate =
-            extract_segment(&target_path, 500.0, 500.0, 30.0)
-                .expect("a zero-length range should still yield one frame");
+        let degenerate = extract_segment(&target_path, 500.0, 500.0, 30.0)
+            .expect("a zero-length range should still yield one frame");
         assert!(
             !degenerate.frames.is_empty(),
             "degenerate range must round up to one frame"

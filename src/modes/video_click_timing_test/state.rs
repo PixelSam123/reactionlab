@@ -6,8 +6,8 @@ use chrono::Local;
 use eframe::egui::ColorImage;
 use rand::RngExt;
 
-use super::extraction::{extract_segment, VideoSegment};
-use super::preload::{spawn_preload, PreloadEvent, PreloadHandle, VideoPlan};
+use super::extraction::{VideoSegment, extract_segment};
+use super::preload::{PreloadEvent, PreloadHandle, VideoPlan, spawn_preload};
 use super::types::{
     AppScreen, FalseClickAction, GroupConfig, RoundOutcome, RoundResult, RunData, RunSettings,
     VideoConfig,
@@ -301,8 +301,14 @@ impl AppState {
             .as_ref()
             .map_or(0.0, |segment| segment.duration_ms);
 
-        let min_wait = self.run_settings.min_wait_ms.min(self.run_settings.max_wait_ms) as f64;
-        let max_wait = self.run_settings.min_wait_ms.max(self.run_settings.max_wait_ms) as f64;
+        let min_wait = self
+            .run_settings
+            .min_wait_ms
+            .min(self.run_settings.max_wait_ms) as f64;
+        let max_wait = self
+            .run_settings
+            .min_wait_ms
+            .max(self.run_settings.max_wait_ms) as f64;
         self.appearance_wait_ms = rng.random_range(min_wait..=max_wait);
 
         self.display_idx = 0;
@@ -421,7 +427,9 @@ impl AppState {
         let (segment, idx) = match self.phase {
             Phase::PreWait => (self.pre_wait_seg.as_ref()?, self.display_idx),
             Phase::Waiting => (self.to_click_seg.as_ref()?, 0),
-            Phase::PlayingToClick | Phase::ClickPending => (self.to_click_seg.as_ref()?, self.display_idx),
+            Phase::PlayingToClick | Phase::ClickPending => {
+                (self.to_click_seg.as_ref()?, self.display_idx)
+            }
             Phase::PostClick => (self.post_click_seg.as_ref()?, self.display_idx),
             Phase::Result => {
                 let segment = self.to_click_seg.as_ref()?;
@@ -513,7 +521,10 @@ fn phase_elapsed(now: Instant, start: Option<Instant>) -> f64 {
 /// Cache key for one decoded segment. Shared by the preload worker and
 /// [`AppState::ensure_segment`] so preloaded work is always a cache hit.
 pub fn segment_key(path: &str, start_ms: f64, end_ms: f64) -> String {
-    format!("{path}|{start_ms:.3}|{end_ms:.3}|{}", super::extraction::MAX_FRAME_WIDTH)
+    format!(
+        "{path}|{start_ms:.3}|{end_ms:.3}|{}",
+        super::extraction::MAX_FRAME_WIDTH
+    )
 }
 
 fn frame_for_elapsed(segment: &VideoSegment, elapsed_ms: f64) -> usize {
@@ -548,7 +559,9 @@ pub fn compute_median(values: &[f64]) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::modes::video_click_timing_test::types::{GroupConfig, TimestampInput, VideoGroup, VideoTimeStamp};
+    use crate::modes::video_click_timing_test::types::{
+        GroupConfig, TimestampInput, VideoGroup, VideoTimeStamp,
+    };
     use std::process::Command;
 
     #[test]
@@ -636,7 +649,10 @@ mod tests {
         let _ = std::fs::remove_file(&target);
 
         assert_eq!(state.screen, AppScreen::Round);
-        let pool = state.round_pool.as_ref().expect("preloaded pool should be set");
+        let pool = state
+            .round_pool
+            .as_ref()
+            .expect("preloaded pool should be set");
         assert_eq!(pool.len(), 1);
         assert!(state.preload.is_none());
         assert!(state.segment_cache.len() >= 1);

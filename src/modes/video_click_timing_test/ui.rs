@@ -6,16 +6,14 @@
 
 use std::time::Instant;
 
-use eframe::egui::{
-    self, CentralPanel, Color32, Frame, Pos2, Rect, TextureHandle, TextureOptions,
-};
+use eframe::egui::{self, CentralPanel, Color32, Frame, Pos2, Rect, TextureHandle, TextureOptions};
 use egui_plot::{Bar, BarChart, Line, Plot, PlotPoints};
 
 use super::extraction::probe_fps;
 use super::state::{AppState, Phase, compute_mean, compute_median};
 use super::storage;
 use super::types::{
-    AppScreen, FalseClickAction, MeasurementUnit, RunData, RunFileInfo, RoundOutcome, RoundResult,
+    AppScreen, FalseClickAction, MeasurementUnit, RoundOutcome, RoundResult, RunData, RunFileInfo,
     TimestampInput, VideoConfig, VideoGroup,
 };
 
@@ -40,6 +38,9 @@ struct UiState {
     video_texture: Option<TextureHandle>,
     last_start_panel_size: Option<egui::Vec2>,
     last_end_panel_size: Option<egui::Vec2>,
+    /// Height of the actions column measured on the previous frame, used to
+    /// vertically center it against the freshly measured history column.
+    last_actions_column_height: f32,
 }
 
 impl UiState {
@@ -54,6 +55,7 @@ impl UiState {
             video_texture: None,
             last_start_panel_size: None,
             last_end_panel_size: None,
+            last_actions_column_height: 0.0,
         }
     }
 }
@@ -114,13 +116,10 @@ impl VideoClickTimingTest {
             let content_width = available_width.min(MAX_CONTENT_WIDTH);
             let stack_content = available_width < START_STACK_WIDTH;
             let panel_rect = ui.available_rect_before_wrap();
-            let needs_resize = self
-                .ui_state
-                .last_start_panel_size
-                .is_none_or(|last_size| {
-                    (last_size.x - panel_rect.width()).abs() > 0.5
-                        || (last_size.y - panel_rect.height()).abs() > 0.5
-                });
+            let needs_resize = self.ui_state.last_start_panel_size.is_none_or(|last_size| {
+                (last_size.x - panel_rect.width()).abs() > 0.5
+                    || (last_size.y - panel_rect.height()).abs() > 0.5
+            });
             self.ui_state.last_start_panel_size = Some(panel_rect.size());
             egui::Area::new(egui::Id::new("video-start-content"))
                 .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
@@ -144,13 +143,23 @@ impl VideoClickTimingTest {
                                 let column_width =
                                     (content_width - ui.spacing().item_spacing.x).max(0.0) / 2.0;
                                 ui.horizontal(|ui| {
+                                    let history_height = ui
+                                        .vertical(|ui| {
+                                            ui.set_width(column_width);
+                                            self.draw_start_history(ui);
+                                            ui.min_rect().height()
+                                        })
+                                        .inner;
+                                    let actions_height = self.ui_state.last_actions_column_height;
+                                    let top_offset =
+                                        ((history_height - actions_height) / 2.0).max(0.0);
                                     ui.vertical(|ui| {
                                         ui.set_width(column_width);
-                                        self.draw_start_history(ui);
-                                    });
-                                    ui.vertical(|ui| {
-                                        ui.set_width(column_width);
+                                        ui.add_space(top_offset);
+                                        let actions_top = ui.cursor().top();
                                         self.draw_start_actions(ui);
+                                        self.ui_state.last_actions_column_height =
+                                            ui.min_rect().bottom() - actions_top;
                                     });
                                 });
                             }
@@ -172,14 +181,17 @@ impl VideoClickTimingTest {
             ui.label("Mean absolute timing error");
             Self::draw_line_chart(ui, &points, "start");
         }
-        ui.centered_and_justified(|ui| {
-            if ui.button("Show all runs").clicked() {
-                self.ui_state.show_all_runs = true;
-                self.ui_state.viewed_run_filename = None;
-                self.ui_state.viewed_run_data = None;
-                self.ui_state.run_file_list = storage::list_run_files();
-            }
-        });
+        ui.with_layout(
+            egui::Layout::top_down(egui::Align::Center).with_cross_justify(true),
+            |ui| {
+                if ui.button("Show all runs").clicked() {
+                    self.ui_state.show_all_runs = true;
+                    self.ui_state.viewed_run_filename = None;
+                    self.ui_state.viewed_run_data = None;
+                    self.ui_state.run_file_list = storage::list_run_files();
+                }
+            },
+        );
     }
 
     fn draw_start_actions(&mut self, ui: &mut egui::Ui) {
@@ -256,13 +268,10 @@ impl VideoClickTimingTest {
                     }
                     if ui.button("Add group").clicked() {
                         let next = self.state.config.groups.len() + 1;
-                        self.state
-                            .config
-                            .groups
-                            .push(VideoGroup {
-                                name: format!("Group {next}"),
-                                videos: Vec::new(),
-                            });
+                        self.state.config.groups.push(VideoGroup {
+                            name: format!("Group {next}"),
+                            videos: Vec::new(),
+                        });
                     }
                     ui.separator();
                     if ui.button("Save & close").clicked() {
@@ -437,10 +446,14 @@ impl VideoClickTimingTest {
     }
 
     fn draw_preparing(&mut self, ui: &mut egui::Ui) {
-        let (fraction, processed, total) = self.state.preload.as_ref().map_or(
-            (1.0, 0, 1),
-            |preload| (preload.progress_fraction(), preload.processed, preload.total),
-        );
+        let (fraction, processed, total) =
+            self.state.preload.as_ref().map_or((1.0, 0, 1), |preload| {
+                (
+                    preload.progress_fraction(),
+                    preload.processed,
+                    preload.total,
+                )
+            });
         CentralPanel::default()
             .frame(Frame::NONE.fill(Color32::from_rgb(24, 24, 28)))
             .show(ui, |ui| {
@@ -486,7 +499,8 @@ impl VideoClickTimingTest {
                     let scale = (canvas.width() / image.width() as f32)
                         .min(canvas.height() / image.height() as f32)
                         .max(0.01);
-                    let size = egui::vec2(image.width() as f32 * scale, image.height() as f32 * scale);
+                    let size =
+                        egui::vec2(image.width() as f32 * scale, image.height() as f32 * scale);
                     let rect = Rect::from_center_size(canvas.center(), size);
                     let painter = ui.painter_at(canvas);
                     let tint = if self.state.phase == Phase::Result {
@@ -494,7 +508,12 @@ impl VideoClickTimingTest {
                     } else {
                         Color32::WHITE
                     };
-                    painter.image(texture.id(), rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), tint);
+                    painter.image(
+                        texture.id(),
+                        rect,
+                        Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
+                        tint,
+                    );
                 } else {
                     ui.centered_and_justified(|ui| {
                         ui.colored_label(Color32::YELLOW, "No frame to display.");
@@ -514,7 +533,10 @@ impl VideoClickTimingTest {
             });
         if matches!(
             self.state.phase,
-            Phase::PreWait | Phase::Waiting | Phase::PlayingToClick | Phase::ClickPending
+            Phase::PreWait
+                | Phase::Waiting
+                | Phase::PlayingToClick
+                | Phase::ClickPending
                 | Phase::PostClick
         ) {
             ui.ctx().request_repaint();
@@ -534,9 +556,15 @@ impl VideoClickTimingTest {
                 if offset.abs() < 0.5 {
                     ("Hit!".to_string(), "Right on the click point.".to_string())
                 } else if offset < 0.0 {
-                    ("Hit!".to_string(), format!("{:.0} ms too early.", offset.abs()))
+                    (
+                        "Hit!".to_string(),
+                        format!("{:.0} ms too early.", offset.abs()),
+                    )
                 } else {
-                    ("Hit!".to_string(), format!("{:.0} ms too late.", offset.abs()))
+                    (
+                        "Hit!".to_string(),
+                        format!("{:.0} ms too late.", offset.abs()),
+                    )
                 }
             }
             RoundOutcome::TooSoon => (
@@ -584,13 +612,10 @@ impl VideoClickTimingTest {
             let available_width = ui.available_width();
             let content_width = available_width.min(MAX_CONTENT_WIDTH);
             let panel_rect = ui.available_rect_before_wrap();
-            let needs_resize = self
-                .ui_state
-                .last_end_panel_size
-                .is_none_or(|last_size| {
-                    (last_size.x - panel_rect.width()).abs() > 0.5
-                        || (last_size.y - panel_rect.height()).abs() > 0.5
-                });
+            let needs_resize = self.ui_state.last_end_panel_size.is_none_or(|last_size| {
+                (last_size.x - panel_rect.width()).abs() > 0.5
+                    || (last_size.y - panel_rect.height()).abs() > 0.5
+            });
             self.ui_state.last_end_panel_size = Some(panel_rect.size());
             egui::Area::new(egui::Id::new("video-end-content"))
                 .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
@@ -683,10 +708,7 @@ impl VideoClickTimingTest {
             .show(ui, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     for run_file in &self.ui_state.run_file_list.clone() {
-                        let selected = self
-                            .ui_state
-                            .viewed_run_filename
-                            .as_deref()
+                        let selected = self.ui_state.viewed_run_filename.as_deref()
                             == Some(&run_file.filename);
                         if ui
                             .selectable_label(selected, &run_file.display_name)
@@ -701,9 +723,7 @@ impl VideoClickTimingTest {
                                 self.ui_state.viewed_run_filename = Some(run_file.filename.clone());
                             }
                         }
-                        if selected
-                            && let Some(ref data) = self.ui_state.viewed_run_data
-                        {
+                        if selected && let Some(ref data) = self.ui_state.viewed_run_data {
                             ui.indent("video-run-detail", |ui| {
                                 Self::draw_run_details(ui, data);
                             });
@@ -718,7 +738,10 @@ impl VideoClickTimingTest {
 
     fn draw_run_details(ui: &mut egui::Ui, run_data: &RunData) {
         ui.label(format!("Timestamp: {}", run_data.timestamp));
-        ui.label(format!("Round count setting: {}", run_data.settings.round_count));
+        ui.label(format!(
+            "Round count setting: {}",
+            run_data.settings.round_count
+        ));
         let errors: Vec<f64> = run_data
             .attempts
             .iter()
@@ -747,8 +770,14 @@ impl VideoClickTimingTest {
         if errors.is_empty() {
             ui.label("No successful timing errors to summarize.");
         } else {
-            ui.label(format!("Mean absolute error: {:.0} ms", compute_mean(&errors)));
-            ui.label(format!("Median absolute error: {:.0} ms", compute_median(&errors)));
+            ui.label(format!(
+                "Mean absolute error: {:.0} ms",
+                compute_mean(&errors)
+            ));
+            ui.label(format!(
+                "Median absolute error: {:.0} ms",
+                compute_median(&errors)
+            ));
         }
         ui.separator();
         for (index, attempt) in run_data.attempts.iter().enumerate() {
@@ -812,7 +841,11 @@ impl VideoClickTimingTest {
                 egui::vec2(ui.available_width(), 200.0),
                 egui::Layout::centered_and_justified(egui::Direction::LeftToRight),
                 |ui| {
-                    ui.label(if data.is_empty() { "No data" } else { "Need more data" });
+                    ui.label(if data.is_empty() {
+                        "No data"
+                    } else {
+                        "Need more data"
+                    });
                 },
             );
             return;

@@ -38,6 +38,9 @@ struct UiState {
     delete_day: u32,
     last_start_panel_size: Option<egui::Vec2>,
     last_end_panel_size: Option<egui::Vec2>,
+    /// Height of the actions column measured on the previous frame, used to
+    /// vertically center it against the freshly measured history column.
+    last_actions_column_height: f32,
 }
 
 impl UiState {
@@ -54,6 +57,7 @@ impl UiState {
             delete_day: today.day(),
             last_start_panel_size: None,
             last_end_panel_size: None,
+            last_actions_column_height: 0.0,
         }
     }
 }
@@ -599,21 +603,21 @@ impl ClickTimingReactionTest {
             ui.label("Mean absolute timing error");
             Self::draw_line_chart(ui, &points);
         }
-        ui.centered_and_justified(|ui| {
-            if ui.button("Show all runs").clicked() {
-                self.ui_state.show_all_runs = true;
-                self.ui_state.viewed_run_filename = None;
-                self.ui_state.viewed_run_data = None;
-                self.ui_state.run_file_list = storage::list_run_files();
-            }
-        });
+        ui.with_layout(
+            egui::Layout::top_down(egui::Align::Center).with_cross_justify(true),
+            |ui| {
+                if ui.button("Show all runs").clicked() {
+                    self.ui_state.show_all_runs = true;
+                    self.ui_state.viewed_run_filename = None;
+                    self.ui_state.viewed_run_data = None;
+                    self.ui_state.run_file_list = storage::list_run_files();
+                }
+            },
+        );
     }
 
-    fn draw_start_actions(&mut self, ui: &mut egui::Ui, add_top_space: bool) {
+    fn draw_start_actions(&mut self, ui: &mut egui::Ui) {
         ui.vertical_centered(|ui| {
-            if add_top_space {
-                ui.add_space(60.0);
-            }
             if ui.button("⚙ Settings").clicked() {
                 self.ui_state.show_settings = !self.ui_state.show_settings;
                 if !self.ui_state.show_settings {
@@ -654,18 +658,28 @@ impl ClickTimingReactionTest {
                             if stack_content {
                                 self.draw_start_history(ui);
                                 ui.add_space(20.0);
-                                self.draw_start_actions(ui, false);
+                                self.draw_start_actions(ui);
                             } else {
                                 let column_width =
                                     (content_width - ui.spacing().item_spacing.x).max(0.0) / 2.0;
                                 ui.horizontal(|ui| {
+                                    let history_height = ui
+                                        .vertical(|ui| {
+                                            ui.set_width(column_width);
+                                            self.draw_start_history(ui);
+                                            ui.min_rect().height()
+                                        })
+                                        .inner;
+                                    let actions_height = self.ui_state.last_actions_column_height;
+                                    let top_offset =
+                                        ((history_height - actions_height) / 2.0).max(0.0);
                                     ui.vertical(|ui| {
                                         ui.set_width(column_width);
-                                        self.draw_start_history(ui);
-                                    });
-                                    ui.vertical(|ui| {
-                                        ui.set_width(column_width);
-                                        self.draw_start_actions(ui, true);
+                                        ui.add_space(top_offset);
+                                        let actions_top = ui.cursor().top();
+                                        self.draw_start_actions(ui);
+                                        self.ui_state.last_actions_column_height =
+                                            ui.min_rect().bottom() - actions_top;
                                     });
                                 });
                             }

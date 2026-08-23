@@ -126,11 +126,7 @@ impl VideoConfig {
         let pre_wait_end = self.pre_wait_end.to_ms(unit, fps);
         let click_point = self.click_point.to_ms(unit, fps);
         let post_click_end = self.post_click_end.to_ms(unit, fps);
-        let to_click_start = if self.has_pre_wait {
-            pre_wait_end
-        } else {
-            0.0
-        };
+        let to_click_start = if self.has_pre_wait { pre_wait_end } else { 0.0 };
         SegmentBoundaries {
             pre_wait: self
                 .has_pre_wait
@@ -156,8 +152,9 @@ impl VideoConfig {
         if let MeasurementUnit::Frame = self.unit
             && self.fps.is_none()
         {
-            messages.push("Frame unit requires a known FPS; click Probe after setting a path."
-                .to_string());
+            messages.push(
+                "Frame unit requires a known FPS; click Probe after setting a path.".to_string(),
+            );
         }
 
         let fps = self.effective_fps();
@@ -212,7 +209,9 @@ pub struct GroupConfig {
 
 impl GroupConfig {
     pub fn has_usable_videos(&self) -> bool {
-        self.groups.iter().any(|group| group.usable_videos().next().is_some())
+        self.groups
+            .iter()
+            .any(|group| group.usable_videos().next().is_some())
     }
 }
 
@@ -418,29 +417,35 @@ mod tests {
         video.pre_wait_start = time_input(16, 0);
         video.pre_wait_end = time_input(15, 0);
         video.click_point = time_input(18, 0);
-        assert!(video
-            .validation_messages()
-            .iter()
-            .any(|message| message.contains("Pre-wait end")));
+        assert!(
+            video
+                .validation_messages()
+                .iter()
+                .any(|message| message.contains("Pre-wait end"))
+        );
     }
 
     #[test]
     fn click_point_not_after_playback_start_is_rejected() {
         let mut video = valid_video();
         video.click_point = time_input(0, 0);
-        assert!(video
-            .validation_messages()
-            .iter()
-            .any(|message| message.contains("Click point")));
+        assert!(
+            video
+                .validation_messages()
+                .iter()
+                .any(|message| message.contains("Click point"))
+        );
 
         video.has_pre_wait = true;
         video.pre_wait_start = time_input(5, 0);
         video.pre_wait_end = time_input(5, 0);
         video.click_point = time_input(4, 999);
-        assert!(video
-            .validation_messages()
-            .iter()
-            .any(|message| message.contains("Click point")));
+        assert!(
+            video
+                .validation_messages()
+                .iter()
+                .any(|message| message.contains("Click point"))
+        );
     }
 
     #[test]
@@ -449,10 +454,12 @@ mod tests {
         video.has_post_click = true;
         video.click_point = time_input(2, 0);
         video.post_click_end = time_input(2, 0);
-        assert!(video
-            .validation_messages()
-            .iter()
-            .any(|message| message.contains("Post-click end")));
+        assert!(
+            video
+                .validation_messages()
+                .iter()
+                .any(|message| message.contains("Post-click end"))
+        );
     }
 
     #[test]
@@ -461,19 +468,23 @@ mod tests {
         video.unit = MeasurementUnit::Frame;
         video.fps = None;
         video.click_point = time_input(2, 0);
-        assert!(video
-            .validation_messages()
-            .iter()
-            .any(|message| message.contains("FPS")));
+        assert!(
+            video
+                .validation_messages()
+                .iter()
+                .any(|message| message.contains("FPS"))
+        );
     }
 
     #[test]
     fn missing_path_is_rejected() {
         let video = VideoConfig::default();
-        assert!(video
-            .validation_messages()
-            .iter()
-            .any(|message| message.contains("path")));
+        assert!(
+            video
+                .validation_messages()
+                .iter()
+                .any(|message| message.contains("path"))
+        );
     }
 
     fn valid_video() -> VideoConfig {
@@ -498,4 +509,3 @@ mod tests {
         }
     }
 }
-
