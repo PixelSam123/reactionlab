@@ -7,7 +7,7 @@
 use std::time::Instant;
 
 use eframe::egui::{self, CentralPanel, Color32, Frame, Pos2, Rect, TextureHandle, TextureOptions};
-use egui_plot::{Bar, BarChart, Line, Plot, PlotPoints};
+use egui_plot::{Bar, BarChart, HoverPosition, Line, Plot, PlotPoints};
 
 use super::extraction::probe_fps;
 use super::state::{AppState, Phase, compute_mean, compute_median};
@@ -868,6 +868,14 @@ impl VideoClickTimingTest {
             .allow_axis_zoom_drag(false)
             .show_crosshair(false)
             .y_axis_formatter(|mark, _| format!("{:.0} ms", mark.value))
+            .label_formatter(|pos| match pos {
+                HoverPosition::NearDataPoint {
+                    plot_name: _,
+                    position,
+                    index,
+                } => Some(format!("R{}: {:.0} ms", index + 1, position.y)),
+                HoverPosition::Elsewhere { .. } => None,
+            })
             .show(ui, |plot_ui| plot_ui.line(line));
     }
 }

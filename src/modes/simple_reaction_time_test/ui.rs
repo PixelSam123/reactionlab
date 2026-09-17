@@ -9,7 +9,7 @@ use std::time::Instant;
 
 use chrono::{Datelike, Local, NaiveDate};
 use eframe::egui::{self, Align2, CentralPanel, Color32, FontId, Frame, Painter, Pos2, Rect};
-use egui_plot::{Bar, BarChart, Line, Plot, PlotPoints};
+use egui_plot::{Bar, BarChart, HoverPosition, Line, Plot, PlotPoints};
 
 use super::state::{AppState, compute_mean, compute_median};
 use super::storage;
@@ -338,6 +338,14 @@ impl SimpleReactionTimeTest {
             .allow_axis_zoom_drag(false)
             .show_crosshair(false)
             .y_axis_formatter(|mark, _| format!("{:.0} ms", mark.value))
+            .label_formatter(|pos| match pos {
+                HoverPosition::NearDataPoint {
+                    plot_name: _,
+                    position,
+                    index,
+                } => Some(format!("R{}: {:.0} ms", index + 1, position.y)),
+                HoverPosition::Elsewhere { .. } => None,
+            })
             .show(ui, |plot_ui| plot_ui.line(line));
     }
 }
