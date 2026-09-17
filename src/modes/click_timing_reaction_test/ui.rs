@@ -8,7 +8,7 @@ use std::time::Instant;
 
 use chrono::{Datelike, Local, NaiveDate};
 use eframe::egui::{self, CentralPanel, Color32, Frame, Painter, Pos2, Rect, Stroke};
-use egui_plot::{Bar, BarChart, HoverPosition, Line, Plot, PlotPoints};
+use egui_plot::{AxisHints, Bar, BarChart, HoverPosition, Line, Plot, PlotPoints};
 
 use super::state::{AppState, compute_mean, compute_median};
 use super::storage;
@@ -542,7 +542,7 @@ impl ClickTimingReactionTest {
         let points: PlotPoints = data
             .iter()
             .enumerate()
-            .map(|(index, &value)| [index as f64, value])
+            .map(|(index, &value)| [(index + 1) as f64, value])
             .collect();
         let line = Line::new("Mean absolute timing error", points)
             .color(Color32::from_rgb(100, 180, 255))
@@ -556,6 +556,11 @@ impl ClickTimingReactionTest {
             .allow_boxed_zoom(false)
             .allow_axis_zoom_drag(false)
             .show_crosshair(false)
+            .custom_x_axes(vec![
+                AxisHints::new_x()
+                    .formatter(|mark, _| format!("{:.0}", mark.value))
+                    .label_spacing(0.0..=1.0),
+            ])
             .y_axis_formatter(|mark, _| format!("{:.0} ms", mark.value))
             .label_formatter(|pos| match pos {
                 HoverPosition::NearDataPoint {

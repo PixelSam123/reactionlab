@@ -9,7 +9,7 @@ use std::time::Instant;
 
 use chrono::{Datelike, Local, NaiveDate};
 use eframe::egui::{self, Align2, CentralPanel, Color32, FontId, Frame, Painter, Pos2, Rect};
-use egui_plot::{Bar, BarChart, HoverPosition, Line, Plot, PlotPoints};
+use egui_plot::{AxisHints, Bar, BarChart, HoverPosition, Line, Plot, PlotPoints};
 
 use super::state::{AppState, compute_mean, compute_median};
 use super::storage;
@@ -317,7 +317,7 @@ impl SimpleReactionTimeTest {
         let points: PlotPoints = data
             .iter()
             .enumerate()
-            .map(|(i, &value)| [i as f64, value])
+            .map(|(index, &value)| [(index + 1) as f64, value])
             .collect();
         let line_color = Color32::from_rgb(100, 140, 255);
         let line = Line::new("Mean reaction time", points)
@@ -333,6 +333,11 @@ impl SimpleReactionTimeTest {
             .allow_boxed_zoom(false)
             .allow_axis_zoom_drag(false)
             .show_crosshair(false)
+            .custom_x_axes(vec![
+                AxisHints::new_x()
+                    .formatter(|mark, _| format!("{:.0}", mark.value))
+                    .label_spacing(0.0..=1.0),
+            ])
             .y_axis_formatter(|mark, _| format!("{:.0} ms", mark.value))
             .label_formatter(|pos| match pos {
                 HoverPosition::NearDataPoint {

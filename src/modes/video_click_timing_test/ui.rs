@@ -7,7 +7,7 @@
 use std::time::Instant;
 
 use eframe::egui::{self, CentralPanel, Color32, Frame, Pos2, Rect, TextureHandle, TextureOptions};
-use egui_plot::{Bar, BarChart, HoverPosition, Line, Plot, PlotPoints};
+use egui_plot::{AxisHints, Bar, BarChart, HoverPosition, Line, Plot, PlotPoints};
 
 use super::extraction::probe_fps;
 use super::state::{AppState, Phase, compute_mean, compute_median};
@@ -849,7 +849,7 @@ impl VideoClickTimingTest {
         let points: PlotPoints = data
             .iter()
             .enumerate()
-            .map(|(index, &value)| [index as f64, value])
+            .map(|(index, &value)| [(index + 1) as f64, value])
             .collect();
         let line = Line::new("Mean absolute timing error", points)
             .color(Color32::from_rgb(100, 180, 255))
@@ -863,6 +863,11 @@ impl VideoClickTimingTest {
             .allow_boxed_zoom(false)
             .allow_axis_zoom_drag(false)
             .show_crosshair(false)
+            .custom_x_axes(vec![
+                AxisHints::new_x()
+                    .formatter(|mark, _| format!("{:.0}", mark.value))
+                    .label_spacing(0.0..=1.0),
+            ])
             .y_axis_formatter(|mark, _| format!("{:.0} ms", mark.value))
             .label_formatter(|pos| match pos {
                 HoverPosition::NearDataPoint {
