@@ -179,7 +179,7 @@ impl VideoClickTimingTest {
                 .map(|(_, mean)| *mean)
                 .collect();
             ui.label("Mean absolute timing error");
-            Self::draw_line_chart(ui, &points, "start");
+            Self::draw_line_chart(ui, &points);
         }
         ui.with_layout(
             egui::Layout::top_down(egui::Align::Center).with_cross_justify(true),
@@ -835,7 +835,7 @@ impl VideoClickTimingTest {
             .show(ui, |plot_ui| plot_ui.bar_chart(chart));
     }
 
-    fn draw_line_chart(ui: &mut egui::Ui, data: &[f64], id_suffix: &str) {
+    fn draw_line_chart(ui: &mut egui::Ui, data: &[f64]) {
         if data.is_empty() {
             ui.allocate_ui_with_layout(
                 egui::vec2(ui.available_width(), 200.0),
@@ -854,7 +854,7 @@ impl VideoClickTimingTest {
         let line = Line::new("Mean absolute timing error", points)
             .color(Color32::from_rgb(100, 180, 255))
             .width(2.0);
-        Plot::new(format!("video-history-{id_suffix}"))
+        Plot::new("video-click-timing-history")
             .height(200.0)
             .sense(egui::Sense::hover())
             .allow_drag(false)
