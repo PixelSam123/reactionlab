@@ -836,16 +836,12 @@ impl VideoClickTimingTest {
     }
 
     fn draw_line_chart(ui: &mut egui::Ui, data: &[f64], id_suffix: &str) {
-        if data.len() <= 1 {
+        if data.is_empty() {
             ui.allocate_ui_with_layout(
                 egui::vec2(ui.available_width(), 200.0),
                 egui::Layout::centered_and_justified(egui::Direction::LeftToRight),
                 |ui| {
-                    ui.label(if data.is_empty() {
-                        "No data"
-                    } else {
-                        "Need more data"
-                    });
+                    ui.label("No data");
                 },
             );
             return;
