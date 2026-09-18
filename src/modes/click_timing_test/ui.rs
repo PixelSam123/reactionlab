@@ -8,7 +8,9 @@ use std::time::Instant;
 
 use chrono::{Datelike, Local, NaiveDate};
 use eframe::egui::{self, CentralPanel, Color32, Frame, Painter, Pos2, Rect, Stroke};
-use egui_plot::{AxisHints, Bar, BarChart, HoverPosition, Line, Plot, PlotPoints};
+use egui_plot::{AxisHints, Bar, BarChart, GridMark, HoverPosition, Line, Plot, PlotPoints};
+
+use crate::modes;
 
 use super::state::{AppState, compute_mean, compute_median};
 use super::storage;
@@ -18,8 +20,7 @@ use super::types::{
     RoundResult, RoundState, RunData, RunFileInfo,
 };
 
-const MAX_CONTENT_WIDTH: f32 = 1000.0;
-const START_STACK_WIDTH: f32 = 600.0;
+/// Round screen wall width
 const WALL_WIDTH: f32 = 8.0;
 
 pub struct ClickTimingTest {
@@ -531,7 +532,10 @@ impl ClickTimingTest {
     fn draw_line_chart(ui: &mut egui::Ui, data: &[f64]) {
         if data.is_empty() {
             ui.allocate_ui_with_layout(
-                egui::vec2(ui.available_width(), 200.0),
+                egui::vec2(
+                    ui.available_width(),
+                    modes::consts::HISTORY_LINE_PLOT_HEIGHT,
+                ),
                 egui::Layout::centered_and_justified(egui::Direction::LeftToRight),
                 |ui| {
                     ui.label("No data");
@@ -548,7 +552,7 @@ impl ClickTimingTest {
             .color(Color32::from_rgb(100, 180, 255))
             .width(2.0);
         Plot::new("click-timing-history")
-            .height(200.0)
+            .height(modes::consts::HISTORY_LINE_PLOT_HEIGHT)
             .sense(egui::Sense::hover())
             .allow_drag(false)
             .allow_scroll(false)
@@ -653,8 +657,8 @@ impl ClickTimingTest {
     fn draw_start(&mut self, ui: &mut egui::Ui) {
         CentralPanel::default().show(ui, |ui| {
             let available_width = ui.available_width();
-            let content_width = available_width.min(MAX_CONTENT_WIDTH);
-            let stack_content = available_width < START_STACK_WIDTH;
+            let content_width = available_width.min(modes::consts::MAX_CONTENT_WIDTH);
+            let stack_content = available_width < modes::consts::START_STACK_WIDTH;
             let panel_rect = ui.available_rect_before_wrap();
             let needs_resize = self.ui_state.last_start_panel_size.is_none_or(|last_size| {
                 (last_size.x - panel_rect.width()).abs() > 0.5
@@ -787,7 +791,7 @@ impl ClickTimingTest {
     fn draw_end(&mut self, ui: &mut egui::Ui) {
         CentralPanel::default().show(ui, |ui| {
             let available_width = ui.available_width();
-            let content_width = available_width.min(MAX_CONTENT_WIDTH);
+            let content_width = available_width.min(modes::consts::MAX_CONTENT_WIDTH);
             let panel_rect = ui.available_rect_before_wrap();
             let needs_resize = self.ui_state.last_end_panel_size.is_none_or(|last_size| {
                 (last_size.x - panel_rect.width()).abs() > 0.5

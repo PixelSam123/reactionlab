@@ -7,7 +7,9 @@
 use std::time::Instant;
 
 use eframe::egui::{self, CentralPanel, Color32, Frame, Pos2, Rect, TextureHandle, TextureOptions};
-use egui_plot::{AxisHints, Bar, BarChart, HoverPosition, Line, Plot, PlotPoints};
+use egui_plot::{AxisHints, Bar, BarChart, GridMark, HoverPosition, Line, Plot, PlotPoints};
+
+use crate::modes;
 
 use super::extraction::probe_fps;
 use super::state::{AppState, Phase, compute_mean, compute_median};
@@ -17,10 +19,7 @@ use super::types::{
     TimestampInput, VideoConfig, VideoGroup,
 };
 
-const MAX_CONTENT_WIDTH: f32 = 1000.0;
-const START_STACK_WIDTH: f32 = 600.0;
-/// Alpha used to ghost the frozen frame on the result screen so the overlay
-/// text stays the focal point.
+/// Used to ghost the frozen frame on the result screen
 const RESULT_FRAME_TINT_ALPHA: u8 = 128;
 
 pub struct VideoClickTimingTest {
@@ -113,8 +112,8 @@ impl VideoClickTimingTest {
     fn draw_start(&mut self, ui: &mut egui::Ui) {
         CentralPanel::default().show(ui, |ui| {
             let available_width = ui.available_width();
-            let content_width = available_width.min(MAX_CONTENT_WIDTH);
-            let stack_content = available_width < START_STACK_WIDTH;
+            let content_width = available_width.min(modes::consts::MAX_CONTENT_WIDTH);
+            let stack_content = available_width < modes::consts::START_STACK_WIDTH;
             let panel_rect = ui.available_rect_before_wrap();
             let needs_resize = self.ui_state.last_start_panel_size.is_none_or(|last_size| {
                 (last_size.x - panel_rect.width()).abs() > 0.5
@@ -610,7 +609,7 @@ impl VideoClickTimingTest {
     fn draw_end(&mut self, ui: &mut egui::Ui) {
         CentralPanel::default().show(ui, |ui| {
             let available_width = ui.available_width();
-            let content_width = available_width.min(MAX_CONTENT_WIDTH);
+            let content_width = available_width.min(modes::consts::MAX_CONTENT_WIDTH);
             let panel_rect = ui.available_rect_before_wrap();
             let needs_resize = self.ui_state.last_end_panel_size.is_none_or(|last_size| {
                 (last_size.x - panel_rect.width()).abs() > 0.5
@@ -838,7 +837,10 @@ impl VideoClickTimingTest {
     fn draw_line_chart(ui: &mut egui::Ui, data: &[f64]) {
         if data.is_empty() {
             ui.allocate_ui_with_layout(
-                egui::vec2(ui.available_width(), 200.0),
+                egui::vec2(
+                    ui.available_width(),
+                    modes::consts::HISTORY_LINE_PLOT_HEIGHT,
+                ),
                 egui::Layout::centered_and_justified(egui::Direction::LeftToRight),
                 |ui| {
                     ui.label("No data");
@@ -855,7 +857,7 @@ impl VideoClickTimingTest {
             .color(Color32::from_rgb(100, 180, 255))
             .width(2.0);
         Plot::new("video-click-timing-history")
-            .height(200.0)
+            .height(modes::consts::HISTORY_LINE_PLOT_HEIGHT)
             .sense(egui::Sense::hover())
             .allow_drag(false)
             .allow_scroll(false)

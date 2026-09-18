@@ -2,6 +2,8 @@ pub mod click_timing_test;
 pub mod simple_reaction_time_test;
 pub mod video_click_timing_test;
 
+mod consts;
+
 #[allow(clippy::enum_variant_names)]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum ModeId {
