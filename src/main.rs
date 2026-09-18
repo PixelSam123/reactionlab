@@ -4,7 +4,7 @@ mod ui;
 use eframe::wgpu::PresentMode;
 use eframe::{NativeOptions, SurfaceConfig, WgpuConfiguration, egui};
 
-fn main() {
+fn main() -> eframe::Result<()> {
     let options = NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([800.0, 600.0])
@@ -20,5 +20,4 @@ fn main() {
         options,
         Box::new(|_cc| Ok(Box::new(ui::ReactionLab::new()))),
     )
-    .ok();
 }
