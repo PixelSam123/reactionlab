@@ -333,6 +333,14 @@ impl SimpleReactionTimeTest {
             .allow_boxed_zoom(false)
             .allow_axis_zoom_drag(false)
             .show_crosshair(false)
+            .x_grid_spacer(|_| {
+                (1..=data.len())
+                    .map(|value| GridMark {
+                        value: value as f64,
+                        step_size: 1.0,
+                    })
+                    .collect()
+            })
             .custom_x_axes(vec![
                 AxisHints::new_x()
                     .formatter(|mark, _| format!("{:.0}", mark.value))
