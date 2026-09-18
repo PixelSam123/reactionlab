@@ -247,7 +247,11 @@ impl SimpleReactionTimeTest {
 
         ui.separator();
 
-        let times: Vec<f64> = run_data.rounds.iter().map(|r| r.reaction_time_ms).collect();
+        let times: Vec<f64> = run_data
+            .rounds
+            .iter()
+            .map(|r| r.reaction_time_ms as f64)
+            .collect();
         let mean = compute_mean(&times);
         let median = compute_median(&times);
         ui.label(format!("Mean: {mean:.0} ms"));
@@ -257,7 +261,7 @@ impl SimpleReactionTimeTest {
 
         for (i, round) in run_data.rounds.iter().enumerate() {
             ui.label(format!(
-                "Round {}: wait {:.0} ms, reaction {:.0} ms",
+                "Round {}: wait {} ms, reaction {} ms",
                 i + 1,
                 round.wait_time_ms,
                 round.reaction_time_ms
@@ -273,7 +277,7 @@ impl SimpleReactionTimeTest {
             .iter()
             .enumerate()
             .map(|(i, round)| {
-                Bar::new((i + 1) as f64, round.reaction_time_ms)
+                Bar::new((i + 1) as f64, round.reaction_time_ms as f64)
                     .name(format!("R{}", i + 1))
                     .fill(bar_color)
                     .width(0.8)
@@ -516,7 +520,7 @@ impl SimpleReactionTimeTest {
                     let heading = self
                         .state
                         .last_reaction_ms
-                        .map_or_else(String::new, |ms| format!("{ms:.0} ms"));
+                        .map_or_else(String::new, |ms| format!("{ms} ms"));
                     let description = format!(
                         "Round {}/{} — click to continue",
                         self.state.current_round + 1,
@@ -562,7 +566,7 @@ impl SimpleReactionTimeTest {
                                 .state
                                 .round_results
                                 .iter()
-                                .map(|r| r.reaction_time_ms)
+                                .map(|r| r.reaction_time_ms as f64)
                                 .collect();
                             let mean = compute_mean(&times);
                             let median = compute_median(&times);
@@ -577,7 +581,7 @@ impl SimpleReactionTimeTest {
 
                             for (i, round) in self.state.round_results.iter().enumerate() {
                                 ui.label(format!(
-                                    "Round {}: wait {:.0} ms, reaction {:.0} ms",
+                                    "Round {}: wait {} ms, reaction {} ms",
                                     i + 1,
                                     round.wait_time_ms,
                                     round.reaction_time_ms

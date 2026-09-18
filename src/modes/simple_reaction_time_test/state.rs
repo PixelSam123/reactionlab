@@ -13,8 +13,8 @@ pub struct AppState {
     pub round_results: Vec<RoundResult>,
     pub wait_start: Option<Instant>,
     pub react_start: Option<Instant>,
-    pub random_wait_ms: f64,
-    pub last_reaction_ms: Option<f64>,
+    pub random_wait_ms: u128,
+    pub last_reaction_ms: Option<u128>,
     pub history_means: Vec<(chrono::NaiveDateTime, f64)>,
 }
 
@@ -31,7 +31,7 @@ impl AppState {
             round_results: Vec::new(),
             wait_start: None,
             react_start: None,
-            random_wait_ms: 0.0,
+            random_wait_ms: 0,
             last_reaction_ms: None,
             history_means,
         }
@@ -44,7 +44,7 @@ impl AppState {
     pub fn start_new_round_at(&mut self, now: Instant) {
         let mut rng = rand::rng();
         self.random_wait_ms =
-            rng.random_range(self.config.min_wait_ms as f64..=self.config.max_wait_ms as f64);
+            u128::from(rng.random_range(self.config.min_wait_ms..=self.config.max_wait_ms));
         self.round_state = RoundState::Waiting;
         self.wait_start = Some(now);
         self.react_start = None;
@@ -54,7 +54,7 @@ impl AppState {
     pub fn update_waiting_at(&mut self, now: Instant) {
         if self.round_state == RoundState::Waiting
             && let Some(start) = self.wait_start
-            && now.duration_since(start).as_secs_f64() * 1000.0 >= self.random_wait_ms
+            && now.duration_since(start).as_millis() >= self.random_wait_ms
         {
             self.round_state = RoundState::Reacting;
             self.react_start = Some(now);
@@ -71,7 +71,7 @@ impl AppState {
                 let react_start = self
                     .react_start
                     .expect("reacting state must have a reaction start");
-                let reaction = now.duration_since(react_start).as_secs_f64() * 1000.0;
+                let reaction = now.duration_since(react_start).as_millis();
                 self.last_reaction_ms = Some(reaction);
                 self.round_results.push(RoundResult {
                     wait_time_ms: self.random_wait_ms,
@@ -105,7 +105,7 @@ impl AppState {
         self.round_state = RoundState::Waiting;
         self.wait_start = None;
         self.react_start = None;
-        self.random_wait_ms = 0.0;
+        self.random_wait_ms = 0;
         self.last_reaction_ms = None;
         self.start_new_round();
         self.screen = AppScreen::Round;
@@ -124,7 +124,7 @@ impl AppState {
         self.current_round = 0;
         self.wait_start = None;
         self.react_start = None;
-        self.random_wait_ms = 0.0;
+        self.random_wait_ms = 0;
         self.last_reaction_ms = None;
     }
 
@@ -183,7 +183,7 @@ mod tests {
         };
         let mut state = AppState::new(config, Vec::new());
         let start = Instant::now();
-        state.random_wait_ms = 100.0;
+        state.random_wait_ms = 100;
         state.wait_start = Some(start);
         state.update_waiting_at(start + std::time::Duration::from_millis(99));
         assert!(matches!(state.round_state, RoundState::Waiting));
@@ -195,13 +195,13 @@ mod tests {
     fn reacting_click_records_result() {
         let mut state = AppState::new(Configurables::default(), Vec::new());
         let start = Instant::now();
-        state.random_wait_ms = 250.0;
+        state.random_wait_ms = 250;
         state.round_state = RoundState::Reacting;
         state.react_start = Some(start);
         state.handle_click_at(start + std::time::Duration::from_millis(125));
         assert!(matches!(state.round_state, RoundState::ResultShowing));
         assert_eq!(state.round_results.len(), 1);
-        assert_eq!(state.round_results[0].reaction_time_ms, 125.0);
+        assert_eq!(state.round_results[0].reaction_time_ms, 125);
     }
 
     #[test]
@@ -231,8 +231,8 @@ mod tests {
         let mut state = AppState::new(Configurables::default(), Vec::new());
         state.current_round = 3;
         state.round_results.push(RoundResult {
-            wait_time_ms: 250.0,
-            reaction_time_ms: 125.0,
+            wait_time_ms: 250,
+            reaction_time_ms: 125,
         });
         state.restart_run();
         assert!(state.round_results.is_empty());
@@ -248,13 +248,13 @@ mod tests {
         state.round_state = RoundState::Reacting;
         state.current_round = 2;
         state.round_results.push(RoundResult {
-            wait_time_ms: 250.0,
-            reaction_time_ms: 125.0,
+            wait_time_ms: 250,
+            reaction_time_ms: 125,
         });
         state.wait_start = Some(Instant::now());
         state.react_start = Some(Instant::now());
-        state.random_wait_ms = 250.0;
-        state.last_reaction_ms = Some(125.0);
+        state.random_wait_ms = 250;
+        state.last_reaction_ms = Some(125);
 
         state.reset_to_start();
 
@@ -264,7 +264,7 @@ mod tests {
         assert!(state.round_results.is_empty());
         assert!(state.wait_start.is_none());
         assert!(state.react_start.is_none());
-        assert_eq!(state.random_wait_ms, 0.0);
+        assert_eq!(state.random_wait_ms, 0);
         assert!(state.last_reaction_ms.is_none());
     }
 
@@ -278,8 +278,8 @@ mod tests {
         state.round_state = RoundState::ResultShowing;
         state.current_round = 0;
         state.round_results.push(RoundResult {
-            wait_time_ms: 250.0,
-            reaction_time_ms: 125.0,
+            wait_time_ms: 250,
+            reaction_time_ms: 125,
         });
         let result = state.handle_click_at(Instant::now());
         assert!(result.is_some());

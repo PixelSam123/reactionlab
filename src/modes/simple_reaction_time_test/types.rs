@@ -76,8 +76,8 @@ pub enum FalseClickAction {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct RoundResult {
-    pub wait_time_ms: f64,
-    pub reaction_time_ms: f64,
+    pub wait_time_ms: u128,
+    pub reaction_time_ms: u128,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

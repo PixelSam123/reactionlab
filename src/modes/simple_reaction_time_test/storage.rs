@@ -122,6 +122,7 @@ pub fn delete_runs_before(date: NaiveDate) {
     }
 }
 
+#[allow(clippy::cast_precision_loss)]
 pub fn load_history_summary() -> Vec<(NaiveDateTime, f64)> {
     let dir = data_dir();
     if !dir.exists() {
@@ -138,7 +139,11 @@ pub fn load_history_summary() -> Vec<(NaiveDateTime, f64)> {
                 && let Ok(content) = fs::read_to_string(&path)
                 && let Ok(run_data) = serde_json::from_str::<RunData>(&content)
             {
-                let times: Vec<f64> = run_data.rounds.iter().map(|r| r.reaction_time_ms).collect();
+                let times: Vec<f64> = run_data
+                    .rounds
+                    .iter()
+                    .map(|r| r.reaction_time_ms as f64)
+                    .collect();
                 let mean = compute_mean(&times);
                 if let Some(dt) = parse_timestamp(&run_data.timestamp) {
                     entries.push((dt, mean));
