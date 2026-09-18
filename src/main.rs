@@ -2,11 +2,13 @@ mod modes;
 mod ui;
 
 use eframe::wgpu::PresentMode;
-use eframe::{NativeOptions, SurfaceConfig, WgpuConfiguration};
+use eframe::{NativeOptions, SurfaceConfig, WgpuConfiguration, egui};
 
 fn main() {
     let options = NativeOptions {
-        viewport: eframe::egui::ViewportBuilder::default().with_inner_size([800.0, 600.0]),
+        viewport: egui::ViewportBuilder::default()
+            .with_inner_size([800.0, 600.0])
+            .with_min_inner_size([420.0, 360.0]),
         wgpu_options: WgpuConfiguration::default().with_surface_config(SurfaceConfig {
             present_mode: PresentMode::AutoNoVsync,
             desired_maximum_frame_latency: Some(1),
