@@ -22,7 +22,7 @@ const MAX_CONTENT_WIDTH: f32 = 1000.0;
 const START_STACK_WIDTH: f32 = 600.0;
 const WALL_WIDTH: f32 = 8.0;
 
-pub struct ClickTimingReactionTest {
+pub struct ClickTimingTest {
     state: AppState,
     ui_state: UiState,
 }
@@ -62,7 +62,7 @@ impl UiState {
     }
 }
 
-impl ClickTimingReactionTest {
+impl ClickTimingTest {
     pub fn new() -> Self {
         Self {
             state: AppState::new(storage::load_config(), storage::load_history_summary()),

@@ -4,4 +4,4 @@ mod timing;
 mod types;
 mod ui;
 
-pub use ui::ClickTimingReactionTest;
+pub use ui::ClickTimingTest;

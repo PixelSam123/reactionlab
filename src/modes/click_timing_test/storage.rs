@@ -10,7 +10,7 @@ pub fn data_dir() -> PathBuf {
     dirs::data_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join("reactionlab")
-        .join("click_timing_reaction_test")
+        .join("click_timing_test")
 }
 
 pub fn config_path() -> PathBuf {

@@ -275,7 +275,7 @@ pub fn compute_median(values: &[f64]) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::modes::click_timing_reaction_test::timing::MotionPlan;
+    use crate::modes::click_timing_test::timing::MotionPlan;
 
     fn state() -> AppState {
         AppState::new(Configurables::default(), Vec::new())

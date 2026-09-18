@@ -1,14 +1,14 @@
 use eframe::egui;
 
 use crate::modes::ModeId;
-use crate::modes::click_timing_reaction_test::ClickTimingReactionTest;
+use crate::modes::click_timing_test::ClickTimingTest;
 use crate::modes::simple_reaction_time_test::SimpleReactionTimeTest;
 use crate::modes::video_click_timing_test::VideoClickTimingTest;
 
 pub struct ReactionLab {
     active_mode: ModeId,
     simple_reaction_time_test: SimpleReactionTimeTest,
-    click_timing_reaction_test: ClickTimingReactionTest,
+    click_timing_test: ClickTimingTest,
     video_click_timing_test: VideoClickTimingTest,
 }
 
@@ -17,7 +17,7 @@ impl ReactionLab {
         Self {
             active_mode: ModeId::SimpleReactionTimeTest,
             simple_reaction_time_test: SimpleReactionTimeTest::new(),
-            click_timing_reaction_test: ClickTimingReactionTest::new(),
+            click_timing_test: ClickTimingTest::new(),
             video_click_timing_test: VideoClickTimingTest::new(),
         }
     }
@@ -27,7 +27,7 @@ impl ReactionLab {
         ui.horizontal(|ui| {
             for mode in [
                 ModeId::SimpleReactionTimeTest,
-                ModeId::ClickTimingReactionTest,
+                ModeId::ClickTimingTest,
                 ModeId::VideoClickTimingTest,
             ] {
                 if ui
@@ -44,8 +44,8 @@ impl ReactionLab {
         {
             match self.active_mode {
                 ModeId::SimpleReactionTimeTest => self.simple_reaction_time_test.reset_to_start(),
-                ModeId::ClickTimingReactionTest => {
-                    self.click_timing_reaction_test.reset_to_start();
+                ModeId::ClickTimingTest => {
+                    self.click_timing_test.reset_to_start();
                 }
                 ModeId::VideoClickTimingTest => self.video_click_timing_test.reset_to_start(),
             }
@@ -62,7 +62,7 @@ impl eframe::App for ReactionLab {
 
         match self.active_mode {
             ModeId::SimpleReactionTimeTest => self.simple_reaction_time_test.show(ui),
-            ModeId::ClickTimingReactionTest => self.click_timing_reaction_test.show(ui),
+            ModeId::ClickTimingTest => self.click_timing_test.show(ui),
             ModeId::VideoClickTimingTest => self.video_click_timing_test.show(ui),
         }
     }
