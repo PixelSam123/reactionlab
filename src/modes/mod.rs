@@ -5,7 +5,7 @@ pub mod video_click_timing_test;
 mod consts;
 
 #[allow(clippy::enum_variant_names)]
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(PartialEq, Eq)]
 pub enum ModeId {
     SimpleReactionTimeTest,
     ClickTimingTest,
@@ -13,7 +13,7 @@ pub enum ModeId {
 }
 
 impl ModeId {
-    pub const fn label(self) -> &'static str {
+    pub const fn label(&self) -> &'static str {
         match self {
             Self::SimpleReactionTimeTest => "Simple reaction time test",
             Self::ClickTimingTest => "Click timing test",

@@ -23,7 +23,6 @@ impl ReactionLab {
     }
 
     fn draw_mode_tabs(&mut self, ui: &mut egui::Ui) {
-        let mut selected_mode = None;
         ui.horizontal(|ui| {
             for mode in [
                 ModeId::SimpleReactionTimeTest,
@@ -34,14 +33,14 @@ impl ReactionLab {
                     .selectable_label(self.active_mode == mode, mode.label())
                     .clicked()
                 {
-                    selected_mode = Some(mode);
+                    self.change_mode(mode);
                 }
             }
         });
+    }
 
-        if let Some(mode) = selected_mode
-            && mode != self.active_mode
-        {
+    fn change_mode(&mut self, mode: ModeId) {
+        if mode != self.active_mode {
             match self.active_mode {
                 ModeId::SimpleReactionTimeTest => self.simple_reaction_time_test.reset_to_start(),
                 ModeId::ClickTimingTest => {
@@ -49,6 +48,7 @@ impl ReactionLab {
                 }
                 ModeId::VideoClickTimingTest => self.video_click_timing_test.reset_to_start(),
             }
+
             self.active_mode = mode;
         }
     }
