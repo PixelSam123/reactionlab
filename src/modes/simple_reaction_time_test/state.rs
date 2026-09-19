@@ -11,17 +11,17 @@ pub struct AppState {
     pub round_state: RoundState,
     pub current_round: usize,
     pub round_results: Vec<RoundResult>,
-    pub wait_start: Option<Instant>,
-    pub react_start: Option<Instant>,
-    pub random_wait_ms: u128,
+    wait_start: Option<Instant>,
+    react_start: Option<Instant>,
+    random_wait_ms: u128,
     pub last_reaction_ms: Option<u128>,
-    pub history_means: Vec<(chrono::NaiveDateTime, f64)>,
+    pub run_history_means: Vec<(chrono::NaiveDateTime, f64)>,
 }
 
 impl AppState {
     pub const fn new(
         config: Configurables,
-        history_means: Vec<(chrono::NaiveDateTime, f64)>,
+        run_history_means: Vec<(chrono::NaiveDateTime, f64)>,
     ) -> Self {
         Self {
             screen: AppScreen::Start,
@@ -33,15 +33,11 @@ impl AppState {
             react_start: None,
             random_wait_ms: 0,
             last_reaction_ms: None,
-            history_means,
+            run_history_means,
         }
     }
 
-    pub fn start_new_round(&mut self) {
-        self.start_new_round_at(Instant::now());
-    }
-
-    pub fn start_new_round_at(&mut self, now: Instant) {
+    fn start_new_round_at(&mut self, now: Instant) {
         let mut rng = rand::rng();
         self.random_wait_ms =
             u128::from(rng.random_range(self.config.min_wait_ms..=self.config.max_wait_ms));
@@ -107,7 +103,7 @@ impl AppState {
         self.react_start = None;
         self.random_wait_ms = 0;
         self.last_reaction_ms = None;
-        self.start_new_round();
+        self.start_new_round_at(Instant::now());
         self.screen = AppScreen::Round;
     }
 
@@ -140,39 +136,9 @@ impl AppState {
     }
 }
 
-pub fn compute_mean(times: &[f64]) -> f64 {
-    if times.is_empty() {
-        return 0.0;
-    }
-    times.iter().sum::<f64>() / times.len() as f64
-}
-
-pub fn compute_median(times: &[f64]) -> f64 {
-    if times.is_empty() {
-        return 0.0;
-    }
-    let mut sorted: Vec<f64> = times.to_vec();
-    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    let n = sorted.len();
-    if n.is_multiple_of(2) {
-        f64::midpoint(sorted[n / 2 - 1], sorted[n / 2])
-    } else {
-        sorted[n / 2]
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn computes_mean_and_median() {
-        assert_eq!(compute_mean(&[]), 0.0);
-        assert_eq!(compute_mean(&[100.0, 200.0, 300.0]), 200.0);
-        assert_eq!(compute_median(&[]), 0.0);
-        assert_eq!(compute_median(&[300.0, 100.0, 200.0]), 200.0);
-        assert_eq!(compute_median(&[400.0, 100.0, 300.0, 200.0]), 250.0);
-    }
 
     #[test]
     fn waiting_round_becomes_reacting_after_delay() {

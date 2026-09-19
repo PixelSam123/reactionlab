@@ -1,9 +1,4 @@
-#![allow(
-    clippy::cast_sign_loss,
-    clippy::cast_precision_loss,
-    clippy::cast_possible_truncation,
-    clippy::cast_possible_wrap
-)]
+#![allow(clippy::cast_precision_loss)]
 
 use std::time::Instant;
 
@@ -13,7 +8,8 @@ use egui_plot::{AxisHints, Bar, BarChart, GridMark, HoverPosition, Line, Plot, P
 
 use crate::modes;
 
-use super::state::{AppState, compute_mean, compute_median};
+use super::state::AppState;
+use super::stats_math::{compute_mean, compute_median};
 use super::storage;
 use super::types::{
     AppScreen, Configurables, FalseClickAction, RoundResult, RoundState, RunData, RunFileInfo,
@@ -24,20 +20,23 @@ pub struct SimpleReactionTimeTest {
     ui_state: UiState,
 }
 
+#[allow(clippy::struct_excessive_bools)]
 struct UiState {
     show_settings: bool,
     show_all_runs: bool,
     run_file_list: Vec<RunFileInfo>,
     viewed_run_filename: Option<String>,
     viewed_run_data: Option<RunData>,
-    delete_year: u32,
+    delete_year: i32,
     delete_month: u32,
     delete_day: u32,
+    show_delete_confirmation: bool,
     last_start_panel_size: Option<egui::Vec2>,
     last_end_panel_size: Option<egui::Vec2>,
-    /// Height of the actions column measured on the previous frame, used to
-    /// vertically center it against the freshly measured history column.
     last_actions_column_height: f32,
+    suppress_settings_close_refresh: bool,
+    config_save_warning: Option<String>,
+    run_save_warning: Option<String>,
 }
 
 impl UiState {
@@ -49,12 +48,16 @@ impl UiState {
             run_file_list: Vec::new(),
             viewed_run_filename: None,
             viewed_run_data: None,
-            delete_year: today.year() as u32,
+            delete_year: today.year(),
             delete_month: today.month(),
             delete_day: today.day(),
+            show_delete_confirmation: false,
             last_start_panel_size: None,
             last_end_panel_size: None,
             last_actions_column_height: 0.0,
+            suppress_settings_close_refresh: false,
+            config_save_warning: None,
+            run_save_warning: None,
         }
     }
 }
@@ -69,9 +72,10 @@ impl SimpleReactionTimeTest {
     }
 
     pub fn reset_to_start(&mut self) {
-        storage::save_config(&self.state.config);
+        self.handle_config_save_result(storage::save_config(&self.state.config));
         self.state.reset_to_start();
         self.ui_state.show_settings = false;
+        self.ui_state.show_delete_confirmation = false;
         self.ui_state.show_all_runs = false;
         self.ui_state.viewed_run_filename = None;
         self.ui_state.viewed_run_data = None;
@@ -79,8 +83,26 @@ impl SimpleReactionTimeTest {
     }
 
     fn persist_finished_run(&mut self, run_data: &RunData) {
-        storage::save_run(run_data);
-        self.state.history_means = storage::load_history_summary();
+        self.handle_run_save_result(storage::save_run(run_data));
+        self.state.run_history_means = storage::load_history_summary();
+    }
+
+    fn handle_settings_closed(&mut self) {
+        self.handle_config_save_result(storage::save_config(&self.state.config));
+        self.state.run_history_means = storage::load_history_summary();
+        self.ui_state.run_file_list.clear();
+    }
+
+    fn handle_config_save_result(&mut self, result: Result<(), String>) {
+        self.ui_state.config_save_warning = result
+            .err()
+            .map(|error| format!("WARN: Config save failed - {error}"));
+    }
+
+    fn handle_run_save_result(&mut self, result: Result<(), String>) {
+        self.ui_state.run_save_warning = result
+            .err()
+            .map(|error| format!("WARN: Run save failed - {error}"));
     }
 
     fn draw_settings(&mut self, ui: &egui::Ui) {
@@ -90,49 +112,57 @@ impl SimpleReactionTimeTest {
             .default_pos(ui.ctx().content_rect().center())
             .pivot(egui::Align2::CENTER_CENTER)
             .show(ui, |ui| {
-                ui.horizontal(|ui| {
-                    ui.label("Wait color:");
-                    let mut c = self.state.config.wait_color_egui();
-                    ui.color_edit_button_srgba(&mut c);
-                    self.state.config.set_wait_color(c);
-                });
-                ui.horizontal(|ui| {
-                    ui.label("React color:");
-                    let mut c = self.state.config.react_color_egui();
-                    ui.color_edit_button_srgba(&mut c);
-                    self.state.config.set_react_color(c);
-                });
+                egui::Grid::new("settings_reaction_time_color_grid")
+                    .num_columns(2)
+                    .show(ui, |ui| {
+                        ui.label("Wait color");
+                        let mut c = self.state.config.wait_color_egui();
+                        ui.color_edit_button_srgba(&mut c);
+                        self.state.config.set_wait_color(c);
+                        ui.end_row();
+
+                        ui.label("React color");
+                        let mut c = self.state.config.react_color_egui();
+                        ui.color_edit_button_srgba(&mut c);
+                        self.state.config.set_react_color(c);
+                        ui.end_row();
+                    });
+
+                ui.separator();
+
+                egui::Grid::new("settings_reaction_time_range_grid")
+                    .num_columns(2)
+                    .show(ui, |ui| {
+                        ui.label("Min wait (ms)");
+                        ui.add(
+                            egui::Slider::new(&mut self.state.config.min_wait_ms, 50..=5000)
+                                .step_by(50.0),
+                        );
+                        ui.end_row();
+
+                        ui.label("Max wait (ms)");
+                        ui.add(
+                            egui::Slider::new(&mut self.state.config.max_wait_ms, 100..=20000)
+                                .step_by(100.0),
+                        );
+                        ui.end_row();
+
+                        if self.state.config.min_wait_ms > self.state.config.max_wait_ms {
+                            self.state.config.min_wait_ms = self.state.config.max_wait_ms;
+                        }
+
+                        ui.label("Round count");
+                        ui.add(
+                            egui::Slider::new(&mut self.state.config.round_count, 1..=50)
+                                .step_by(1.0),
+                        );
+                        ui.end_row();
+                    });
 
                 ui.separator();
 
                 ui.horizontal(|ui| {
-                    ui.label("Min wait (ms):");
-                    ui.add(
-                        egui::Slider::new(&mut self.state.config.min_wait_ms, 50..=5000)
-                            .step_by(50.0),
-                    );
-                });
-                ui.horizontal(|ui| {
-                    ui.label("Max wait (ms):");
-                    ui.add(
-                        egui::Slider::new(&mut self.state.config.max_wait_ms, 100..=20000)
-                            .step_by(100.0),
-                    );
-                });
-                if self.state.config.min_wait_ms > self.state.config.max_wait_ms {
-                    self.state.config.min_wait_ms = self.state.config.max_wait_ms;
-                }
-                ui.horizontal(|ui| {
-                    ui.label("Round count:");
-                    ui.add(
-                        egui::Slider::new(&mut self.state.config.round_count, 1..=50).step_by(1.0),
-                    );
-                });
-
-                ui.separator();
-
-                ui.horizontal(|ui| {
-                    ui.label("On false click:");
+                    ui.label("On false click");
                     ui.radio_value(
                         &mut self.state.config.false_click_action,
                         FalseClickAction::RetryRound,
@@ -173,18 +203,49 @@ impl SimpleReactionTimeTest {
                             .speed(1),
                     );
                 });
-                if ui.button("Delete").clicked()
-                    && let Some(date) = NaiveDate::from_ymd_opt(
-                        self.ui_state.delete_year as i32,
-                        self.ui_state.delete_month,
-                        self.ui_state.delete_day,
-                    )
-                {
-                    storage::delete_runs_before(date);
-                    self.state.history_means = storage::load_history_summary();
-                    self.ui_state.run_file_list = storage::list_run_files();
+                if ui.button("Delete").clicked() {
+                    self.ui_state.show_delete_confirmation = true;
                 }
             });
+    }
+
+    fn draw_delete_confirmation(&mut self, ui: &egui::Ui) {
+        let mut confirmed = false;
+        let mut cancelled = false;
+
+        egui::Window::new("Confirm deletion")
+            .open(&mut self.ui_state.show_delete_confirmation)
+            .order(egui::Order::Foreground)
+            .collapsible(false)
+            .resizable(false)
+            .default_pos(ui.ctx().content_rect().center())
+            .pivot(egui::Align2::CENTER_CENTER)
+            .show(ui, |ui| {
+                ui.label("Are you sure?");
+                ui.horizontal(|ui| {
+                    if ui.button("Confirm").clicked() {
+                        confirmed = true;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        cancelled = true;
+                    }
+                });
+            });
+
+        if confirmed || cancelled {
+            self.ui_state.show_delete_confirmation = false;
+        }
+
+        let date = NaiveDate::from_ymd_opt(
+            self.ui_state.delete_year,
+            self.ui_state.delete_month,
+            self.ui_state.delete_day,
+        );
+        if confirmed && let Some(date) = date {
+            storage::delete_runs_before(date);
+            self.state.run_history_means = storage::load_history_summary();
+            self.ui_state.run_file_list = storage::list_run_files();
+        }
     }
 
     fn draw_all_runs(&mut self, ui: &egui::Ui) {
@@ -228,13 +289,13 @@ impl SimpleReactionTimeTest {
     fn draw_run_details(ui: &mut egui::Ui, run_data: &RunData) {
         ui.label(format!("Timestamp: {}", run_data.timestamp));
         ui.label(format!(
-            "Wait color: RGB({}, {}, {})",
+            "Wait color: R{}, G{}, B{}",
             run_data.config.wait_color[0],
             run_data.config.wait_color[1],
             run_data.config.wait_color[2]
         ));
         ui.label(format!(
-            "React color: RGB({}, {}, {})",
+            "React color: R{}, G{}, B{}",
             run_data.config.react_color[0],
             run_data.config.react_color[1],
             run_data.config.react_color[2]
@@ -367,6 +428,9 @@ impl SimpleReactionTimeTest {
 
 impl SimpleReactionTimeTest {
     pub fn show(&mut self, ui: &mut egui::Ui) {
+        let settings_was_open = self.ui_state.show_settings;
+        self.ui_state.suppress_settings_close_refresh = false;
+
         if self.ui_state.last_start_panel_size.is_some() && self.state.screen != AppScreen::Start {
             self.ui_state.last_start_panel_size = None;
         }
@@ -381,6 +445,9 @@ impl SimpleReactionTimeTest {
         if self.ui_state.show_settings {
             self.draw_settings(ui);
         }
+        if self.ui_state.show_delete_confirmation {
+            self.draw_delete_confirmation(ui);
+        }
         if self.ui_state.show_all_runs {
             self.draw_all_runs(ui);
         }
@@ -390,17 +457,25 @@ impl SimpleReactionTimeTest {
             AppScreen::Round => self.draw_round(ui),
             AppScreen::End => self.draw_end(ui),
         }
+
+        if settings_was_open
+            && !self.ui_state.show_settings
+            && !self.ui_state.suppress_settings_close_refresh
+        {
+            self.ui_state.show_delete_confirmation = false;
+            self.handle_settings_closed();
+        }
     }
 }
 
 impl SimpleReactionTimeTest {
     fn draw_start_history(&mut self, ui: &mut egui::Ui) {
-        if self.state.history_means.is_empty() {
+        if self.state.run_history_means.is_empty() {
             ui.label("No previous runs yet.");
         } else {
             let points: Vec<f64> = self
                 .state
-                .history_means
+                .run_history_means
                 .iter()
                 .map(|(_, mean)| *mean)
                 .collect();
@@ -425,14 +500,13 @@ impl SimpleReactionTimeTest {
         ui.vertical_centered(|ui| {
             if ui.button("⚙ Settings").clicked() {
                 self.ui_state.show_settings = !self.ui_state.show_settings;
-                if !self.ui_state.show_settings {
-                    storage::save_config(&self.state.config);
-                    self.state.history_means = storage::load_history_summary();
-                    self.ui_state.run_file_list.clear();
-                }
             }
-            ui.add_space(20.0);
+            ui.add_space(16.0);
             if ui.button("Start new run").clicked() {
+                self.ui_state.show_settings = false;
+                self.ui_state.show_delete_confirmation = false;
+                self.ui_state.suppress_settings_close_refresh = true;
+                self.handle_config_save_result(storage::save_config(&self.state.config));
                 self.state.restart_run();
             }
         });
@@ -444,7 +518,7 @@ impl SimpleReactionTimeTest {
             let content_width = available_width.min(modes::consts::MAX_CONTENT_WIDTH);
             let stack_content = available_width < modes::consts::START_STACK_WIDTH;
             let panel_rect = ui.available_rect_before_wrap();
-            let needs_resize = self.ui_state.last_start_panel_size.is_none_or(|last_size| {
+            let is_needs_resize = self.ui_state.last_start_panel_size.is_none_or(|last_size| {
                 (last_size.x - panel_rect.width()).abs() > 0.5
                     || (last_size.y - panel_rect.height()).abs() > 0.5
             });
@@ -454,16 +528,24 @@ impl SimpleReactionTimeTest {
                 .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
                 .constrain_to(panel_rect)
                 .default_size(egui::vec2(content_width, panel_rect.height()))
-                .sizing_pass(needs_resize)
+                .sizing_pass(is_needs_resize)
                 .show(ui.ctx(), |ui| {
                     ui.set_width(content_width);
                     egui::ScrollArea::vertical()
                         .max_height(panel_rect.height())
                         .auto_shrink([false, true])
                         .show(ui, |ui| {
+                            if let Some(warning) = &self.ui_state.config_save_warning {
+                                ui.colored_label(Color32::YELLOW, warning);
+                                ui.add_space(8.0);
+                            }
+                            if let Some(warning) = &self.ui_state.run_save_warning {
+                                ui.colored_label(Color32::YELLOW, warning);
+                                ui.add_space(8.0);
+                            }
                             if stack_content {
                                 self.draw_start_history(ui);
-                                ui.add_space(20.0);
+                                ui.add_space(24.0);
                                 self.draw_start_actions(ui);
                             } else {
                                 let column_width =
@@ -501,7 +583,7 @@ impl SimpleReactionTimeTest {
         let fill_color = match self.state.round_state {
             RoundState::Waiting => self.state.config.wait_color_egui(),
             RoundState::Reacting => self.state.config.react_color_egui(),
-            RoundState::ResultShowing | RoundState::TooSoon => Color32::from_rgb(30, 30, 30),
+            RoundState::ResultShowing | RoundState::TooSoon => ui.visuals().panel_fill,
         };
 
         CentralPanel::default()
@@ -572,6 +654,7 @@ impl SimpleReactionTimeTest {
                             let median = compute_median(&times);
 
                             ui.heading("Run Results");
+
                             ui.separator();
 
                             ui.label(format!("Mean: {mean:.0} ms"));

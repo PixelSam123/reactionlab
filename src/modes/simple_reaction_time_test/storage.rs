@@ -3,17 +3,17 @@ use std::path::PathBuf;
 
 use chrono::{NaiveDate, NaiveDateTime};
 
-use super::state::compute_mean;
+use super::stats_math::compute_mean;
 use super::types::{Configurables, RunData, RunFileInfo};
 
-pub fn data_dir() -> PathBuf {
+fn data_dir() -> PathBuf {
     dirs::data_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join("reactionlab")
         .join("simple_reaction_time_test")
 }
 
-pub fn config_path() -> PathBuf {
+fn config_path() -> PathBuf {
     data_dir().join("config.json")
 }
 
@@ -29,23 +29,25 @@ pub fn load_config() -> Configurables {
     }
 }
 
-pub fn save_config(config: &Configurables) {
+pub fn save_config(config: &Configurables) -> Result<(), String> {
     let path = config_path();
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).ok();
+        fs::create_dir_all(parent).map_err(|error| format!("directory creation: {error}"))?;
     }
-    if let Ok(json) = serde_json::to_string_pretty(config) {
-        fs::write(path, json).ok();
-    }
+    let json =
+        serde_json::to_string_pretty(config).map_err(|error| format!("serialization: {error}"))?;
+    fs::write(path, json).map_err(|error| format!("file write: {error}"))?;
+    Ok(())
 }
 
-pub fn save_run(run_data: &RunData) {
+pub fn save_run(run_data: &RunData) -> Result<(), String> {
     let runs_dir = data_dir();
-    fs::create_dir_all(&runs_dir).ok();
+    fs::create_dir_all(&runs_dir).map_err(|error| format!("directory creation: {error}"))?;
     let filename = format!("reactionlab-{}.json", run_data.timestamp);
-    if let Ok(json) = serde_json::to_string_pretty(run_data) {
-        fs::write(runs_dir.join(filename), json).ok();
-    }
+    let json = serde_json::to_string_pretty(run_data)
+        .map_err(|error| format!("serialization: {error}"))?;
+    fs::write(runs_dir.join(filename), json).map_err(|error| format!("file write: {error}"))?;
+    Ok(())
 }
 
 pub fn list_run_files() -> Vec<RunFileInfo> {
@@ -57,7 +59,7 @@ pub fn list_run_files() -> Vec<RunFileInfo> {
     if let Ok(read_dir) = fs::read_dir(&dir) {
         for entry in read_dir.flatten() {
             let path = entry.path();
-            if path.extension().is_some_and(|e| e == "json")
+            if path.extension().is_some_and(|ext| ext == "json")
                 && let Some(fname) = path.file_name()
             {
                 let filename = fname.to_string_lossy().to_string();
@@ -75,19 +77,19 @@ pub fn list_run_files() -> Vec<RunFileInfo> {
     files
 }
 
-pub fn filename_to_display(filename: &str) -> String {
-    let ts_str = filename
+fn filename_to_display(filename: &str) -> String {
+    let timestamp_str = filename
         .strip_prefix("reactionlab-")
         .and_then(|s| s.strip_suffix(".json"))
         .unwrap_or("");
-    parse_timestamp(ts_str).map_or_else(
+    parse_timestamp(timestamp_str).map_or_else(
         || filename.to_string(),
         |dt| {
-            dt.format("%e %B %Y, %H:%M:%S")
-                .to_string()
-                .trim_start()
-                .to_string()
-                + &format!(".{:03}", dt.and_utc().timestamp_subsec_millis())
+            format!(
+                "{}.{:03}",
+                dt.format("%e %B %Y, %H:%M:%S"),
+                dt.and_utc().timestamp_subsec_millis()
+            )
         },
     )
 }
@@ -107,14 +109,11 @@ pub fn delete_runs_before(date: NaiveDate) {
     if let Ok(read_dir) = fs::read_dir(&dir) {
         for entry in read_dir.flatten() {
             let path = entry.path();
-            if path.extension().is_some_and(|e| e == "json")
+            if path.extension().is_some_and(|ext| ext == "json")
                 && let Some(stem) = path.file_stem()
             {
                 let name = stem.to_string_lossy().to_string();
-                if let Some(ts_str) = name.strip_prefix("reactionlab-")
-                    && let Ok(file_date) = NaiveDate::parse_from_str(&ts_str[..10], "%Y-%m-%d")
-                    && file_date < date
-                {
+                if is_filename_stem_before(&name, date) {
                     fs::remove_file(&path).ok();
                 }
             }
@@ -122,6 +121,16 @@ pub fn delete_runs_before(date: NaiveDate) {
     }
 }
 
+fn is_filename_stem_before(filename_stem: &str, date: NaiveDate) -> bool {
+    const DATE_FMT_LEN: usize = 10;
+    filename_stem
+        .strip_prefix("reactionlab-")
+        .and_then(|timestamp| timestamp.get(..DATE_FMT_LEN))
+        .and_then(|date_str| NaiveDate::parse_from_str(date_str, "%Y-%m-%d").ok())
+        .is_some_and(|file_date| file_date < date)
+}
+
+/// Get last 10 runs with their mean reaction times
 #[allow(clippy::cast_precision_loss)]
 pub fn load_history_summary() -> Vec<(NaiveDateTime, f64)> {
     let dir = data_dir();
@@ -132,7 +141,7 @@ pub fn load_history_summary() -> Vec<(NaiveDateTime, f64)> {
     if let Ok(read_dir) = fs::read_dir(&dir) {
         for entry in read_dir.flatten() {
             let path = entry.path();
-            if path.extension().is_some_and(|e| e == "json")
+            if path.extension().is_some_and(|ext| ext == "json")
                 && path
                     .file_stem()
                     .is_some_and(|s| s.to_string_lossy().starts_with("reactionlab-"))
@@ -145,8 +154,8 @@ pub fn load_history_summary() -> Vec<(NaiveDateTime, f64)> {
                     .map(|r| r.reaction_time_ms as f64)
                     .collect();
                 let mean = compute_mean(&times);
-                if let Some(dt) = parse_timestamp(&run_data.timestamp) {
-                    entries.push((dt, mean));
+                if let Some(date_time) = parse_timestamp(&run_data.timestamp) {
+                    entries.push((date_time, mean));
                 }
             }
         }
@@ -174,5 +183,25 @@ mod tests {
             filename_to_display("reactionlab-2026-08-18_12-34-56.123.json"),
             "18 August 2026, 12:34:56.123"
         );
+    }
+
+    #[test]
+    fn marks_filename_stem_before_date() {
+        let date = NaiveDate::from_ymd_opt(2026, 8, 19).unwrap();
+
+        assert!(is_filename_stem_before(
+            "reactionlab-2026-08-18_12-34-56.123",
+            date
+        ));
+    }
+
+    #[test]
+    fn denies_filename_stem_after_date() {
+        let date = NaiveDate::from_ymd_opt(2026, 8, 18).unwrap();
+
+        assert!(!is_filename_stem_before(
+            "reactionlab-2026-08-19_12-34-56.123",
+            date
+        ));
     }
 }

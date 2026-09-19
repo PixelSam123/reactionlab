@@ -1,7 +1,7 @@
 use eframe::egui::Color32;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Configurables {
     #[serde(default = "default_wait_color")]
     pub wait_color: [u8; 3],
@@ -66,11 +66,10 @@ impl Configurables {
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
 pub enum FalseClickAction {
-    #[serde(rename = "retry_round")]
     #[default]
     RetryRound,
-    #[serde(rename = "end_run")]
     EndRun,
 }
 
@@ -100,7 +99,7 @@ pub enum AppScreen {
     End,
 }
 
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq)]
 pub enum RoundState {
     Waiting,
     Reacting,
