@@ -3,7 +3,8 @@ use std::path::PathBuf;
 
 use chrono::{NaiveDate, NaiveDateTime};
 
-use super::stats_math::compute_mean;
+use crate::shared::stats_math::compute_mean;
+
 use super::types::{Configurables, RunData, RunFileInfo};
 
 fn data_dir() -> PathBuf {

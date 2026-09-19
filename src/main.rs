@@ -1,4 +1,5 @@
 mod modes;
+mod shared;
 mod ui;
 
 use eframe::wgpu::PresentMode;

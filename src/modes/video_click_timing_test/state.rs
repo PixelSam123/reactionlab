@@ -535,27 +535,6 @@ fn frame_for_elapsed(segment: &VideoSegment, elapsed_ms: f64) -> usize {
     idx.min(segment.frames.len() - 1)
 }
 
-pub fn compute_mean(values: &[f64]) -> f64 {
-    if values.is_empty() {
-        return 0.0;
-    }
-    values.iter().sum::<f64>() / values.len() as f64
-}
-
-pub fn compute_median(values: &[f64]) -> f64 {
-    if values.is_empty() {
-        return 0.0;
-    }
-    let mut sorted = values.to_vec();
-    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    let middle = sorted.len() / 2;
-    if sorted.len().is_multiple_of(2) {
-        f64::midpoint(sorted[middle - 1], sorted[middle])
-    } else {
-        sorted[middle]
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

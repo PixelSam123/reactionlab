@@ -251,27 +251,6 @@ fn elapsed_ms(now: Instant, start: Instant) -> f64 {
     now.duration_since(start).as_secs_f64() * 1000.0
 }
 
-pub fn compute_mean(values: &[f64]) -> f64 {
-    if values.is_empty() {
-        return 0.0;
-    }
-    values.iter().sum::<f64>() / values.len() as f64
-}
-
-pub fn compute_median(values: &[f64]) -> f64 {
-    if values.is_empty() {
-        return 0.0;
-    }
-    let mut sorted = values.to_vec();
-    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    let middle = sorted.len() / 2;
-    if sorted.len().is_multiple_of(2) {
-        f64::midpoint(sorted[middle - 1], sorted[middle])
-    } else {
-        sorted[middle]
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -406,13 +385,5 @@ mod tests {
         assert_eq!(run.attempts[1].outcome, RoundOutcome::Hit);
         assert_eq!(run.attempts[1].attempt_number, 2);
         assert_eq!(run.attempts[1].round_number, 1);
-    }
-
-    #[test]
-    fn computes_mean_and_median() {
-        assert_eq!(compute_mean(&[]), 0.0);
-        assert_eq!(compute_mean(&[100.0, 200.0, 300.0]), 200.0);
-        assert_eq!(compute_median(&[300.0, 100.0, 200.0]), 200.0);
-        assert_eq!(compute_median(&[400.0, 100.0, 300.0, 200.0]), 250.0);
     }
 }

@@ -11,8 +11,9 @@ use eframe::egui::{self, CentralPanel, Color32, Frame, Painter, Pos2, Rect, Stro
 use egui_plot::{AxisHints, Bar, BarChart, GridMark, HoverPosition, Line, Plot, PlotPoints};
 
 use crate::modes;
+use crate::shared::stats_math::{compute_mean, compute_median};
 
-use super::state::{AppState, compute_mean, compute_median};
+use super::state::AppState;
 use super::storage;
 use super::timing::MotionPlan;
 use super::types::{

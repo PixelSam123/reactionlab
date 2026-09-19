@@ -10,9 +10,10 @@ use eframe::egui::{self, CentralPanel, Color32, Frame, Pos2, Rect, TextureHandle
 use egui_plot::{AxisHints, Bar, BarChart, GridMark, HoverPosition, Line, Plot, PlotPoints};
 
 use crate::modes;
+use crate::shared::stats_math::{compute_mean, compute_median};
 
 use super::extraction::probe_fps;
-use super::state::{AppState, Phase, compute_mean, compute_median};
+use super::state::{AppState, Phase};
 use super::storage;
 use super::types::{
     AppScreen, FalseClickAction, MeasurementUnit, RoundOutcome, RoundResult, RunData, RunFileInfo,

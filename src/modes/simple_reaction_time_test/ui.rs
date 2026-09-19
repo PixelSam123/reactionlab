@@ -7,9 +7,9 @@ use eframe::egui::{self, Align2, CentralPanel, Color32, FontId, Frame, Painter, 
 use egui_plot::{AxisHints, Bar, BarChart, GridMark, HoverPosition, Line, Plot, PlotPoints};
 
 use crate::modes;
+use crate::shared::stats_math::{compute_mean, compute_median};
 
 use super::state::AppState;
-use super::stats_math::{compute_mean, compute_median};
 use super::storage;
 use super::types::{
     AppScreen, Configurables, FalseClickAction, RoundResult, RoundState, RunData, RunFileInfo,

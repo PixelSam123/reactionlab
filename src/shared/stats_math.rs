@@ -13,10 +13,11 @@ pub fn compute_median(times: &[f64]) -> f64 {
     let mut sorted: Vec<f64> = times.to_vec();
     sorted.sort_by(f64::total_cmp);
     let n = sorted.len();
+    let middle = n / 2;
     if n.is_multiple_of(2) {
-        f64::midpoint(sorted[n / 2 - 1], sorted[n / 2])
+        f64::midpoint(sorted[middle - 1], sorted[middle])
     } else {
-        sorted[n / 2]
+        sorted[middle]
     }
 }
 
