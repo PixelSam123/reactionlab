@@ -394,4 +394,77 @@ mod tests {
         assert_eq!(run.attempts[1].attempt_number, 2);
         assert_eq!(run.attempts[1].round_number, 1);
     }
+
+    #[test]
+    #[allow(clippy::float_cmp)]
+    fn reset_to_start_clears_active_round_state() {
+        let mut state = state();
+        let now = Instant::now();
+        state.start_new_round_with_plan_at(now, 100.0, plan(&state.config));
+        state.update_at(now + std::time::Duration::from_millis(100), false);
+        state.update_at(now + std::time::Duration::from_millis(101), true);
+
+        state.reset_to_start();
+
+        assert_eq!(state.screen, AppScreen::Start);
+        assert_eq!(state.round_state, RoundState::Waiting);
+        assert_eq!(state.current_round, 0);
+        assert!(state.attempt_results.is_empty());
+        assert!(state.wait_start.is_none());
+        assert!(state.movement_start.is_none());
+        assert_eq!(state.appearance_wait_ms, 0.0);
+        assert!(state.plan.is_none());
+        assert!(state.pending_result.is_none());
+        assert!(state.last_result.is_none());
+    }
+
+    #[test]
+    fn restart_run_starts_a_fresh_round() {
+        let mut state = state();
+        state.attempt_results.push(RoundResult {
+            round_number: 1,
+            attempt_number: 1,
+            direction: TargetDirection::FromLeft,
+            appearance_wait_ms: 100.0,
+            initial_velocity_fraction: 1.0,
+            stop_behavior: StopBehavior::ContinueToOppositeWall,
+            center_crossing_ms: 100.0,
+            click_offset_ms: None,
+            outcome: RoundOutcome::TooSoon,
+        });
+        state.current_round = 1;
+
+        state.restart_run();
+
+        assert_eq!(state.screen, AppScreen::Round);
+        assert_eq!(state.round_state, RoundState::Waiting);
+        assert_eq!(state.current_round, 0);
+        assert!(state.attempt_results.is_empty());
+        assert!(state.wait_start.is_some());
+        assert!(state.plan.is_some());
+        assert!(state.pending_result.is_none());
+        assert!(state.last_result.is_none());
+    }
+
+    #[test]
+    fn starting_a_new_round_clears_previous_result_state() {
+        let mut state = state();
+        state.last_result = Some(RoundResult {
+            round_number: 1,
+            attempt_number: 1,
+            direction: TargetDirection::FromLeft,
+            appearance_wait_ms: 0.0,
+            initial_velocity_fraction: 1.0,
+            stop_behavior: StopBehavior::ContinueToOppositeWall,
+            center_crossing_ms: 100.0,
+            click_offset_ms: Some(0.0),
+            outcome: RoundOutcome::Hit,
+        });
+        state.pending_result = state.last_result.clone();
+
+        state.start_new_round_with_plan_at(Instant::now(), 0.0, plan(&state.config));
+
+        assert!(state.pending_result.is_none());
+        assert!(state.last_result.is_none());
+    }
 }
