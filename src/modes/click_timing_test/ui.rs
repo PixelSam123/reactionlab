@@ -82,8 +82,8 @@ impl ClickTimingTest {
         self.ui_state.run_file_list.clear();
     }
 
-    fn persist_finished_run(&mut self, run_data: RunData) {
-        storage::save_run(&run_data);
+    fn persist_finished_run(&mut self, run_data: &RunData) {
+        storage::save_run(run_data);
         self.state.history_means = storage::load_history_summary();
     }
 
@@ -718,7 +718,7 @@ impl ClickTimingTest {
                 let canvas_rect = ui.available_rect_before_wrap();
                 let pressed = ui.input(|input| input.pointer.primary_pressed());
                 if let Some(run_data) = self.state.update_at(now, pressed) {
-                    self.persist_finished_run(run_data);
+                    self.persist_finished_run(&run_data);
                 }
 
                 let painter = ui.painter_at(canvas_rect);
@@ -747,10 +747,8 @@ impl ClickTimingTest {
                 }
 
                 if matches!(self.state.round_state, RoundState::Moving)
-                    && let (Some(plan), Some(elapsed)) = (
-                        self.state.plan.as_ref(),
-                        self.state.movement_elapsed_ms(now),
-                    )
+                    && let (Some(plan), Some(elapsed)) =
+                        (self.state.plan(), self.state.movement_elapsed_ms(now))
                 {
                     draw_target(
                         &painter,
@@ -777,7 +775,7 @@ impl ClickTimingTest {
                 }
 
                 if self.state.round_state == RoundState::ResultShowing
-                    && let Some(result) = &self.state.last_result
+                    && let Some(result) = self.state.last_result()
                 {
                     draw_result_overlay(
                         &painter,

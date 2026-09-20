@@ -15,12 +15,12 @@ pub struct AppState {
     pub round_state: RoundState,
     pub current_round: usize,
     pub attempt_results: Vec<RoundResult>,
-    pub wait_start: Option<Instant>,
-    pub movement_start: Option<Instant>,
-    pub appearance_wait_ms: f64,
-    pub plan: Option<MotionPlan>,
-    pub pending_result: Option<RoundResult>,
-    pub last_result: Option<RoundResult>,
+    wait_start: Option<Instant>,
+    movement_start: Option<Instant>,
+    appearance_wait_ms: f64,
+    plan: Option<MotionPlan>,
+    pending_result: Option<RoundResult>,
+    last_result: Option<RoundResult>,
     pub history_means: Vec<(chrono::NaiveDateTime, f64)>,
 }
 
@@ -49,6 +49,7 @@ impl AppState {
         self.start_new_round_at(Instant::now());
     }
 
+    #[allow(clippy::cast_precision_loss)]
     pub fn start_new_round_at(&mut self, now: Instant) {
         let mut rng = rand::rng();
         let min_wait = self.config.min_wait_ms.min(self.config.max_wait_ms);
@@ -136,6 +137,14 @@ impl AppState {
 
     pub fn movement_elapsed_ms(&self, now: Instant) -> Option<f64> {
         self.movement_start.map(|start| elapsed_ms(now, start))
+    }
+
+    pub const fn plan(&self) -> Option<&MotionPlan> {
+        self.plan.as_ref()
+    }
+
+    pub const fn last_result(&self) -> Option<&RoundResult> {
+        self.last_result.as_ref()
     }
 
     pub fn acknowledge_result(&mut self, now: Instant) -> Option<RunData> {
@@ -234,7 +243,6 @@ impl AppState {
 
 fn choose_direction(config: &Configurables, rng: &mut impl rand::Rng) -> TargetDirection {
     match (config.target_direction_left, config.target_direction_right) {
-        (true, false) => TargetDirection::FromLeft,
         (false, true) => TargetDirection::FromRight,
         (true, true) => {
             if rng.random_range(0..2) == 0 {
@@ -243,7 +251,7 @@ fn choose_direction(config: &Configurables, rng: &mut impl rand::Rng) -> TargetD
                 TargetDirection::FromRight
             }
         }
-        (false, false) => TargetDirection::FromLeft,
+        (true | false, false) => TargetDirection::FromLeft,
     }
 }
 
